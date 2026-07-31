@@ -44,7 +44,7 @@ Copy `.env.example` to `.env.local` and adjust as needed:
 
 | Var | Purpose | Default |
 |-----|---------|---------|
-| `NEXT_PUBLIC_API_URL` | hospital-api base | `http://localhost:4200` (dev) / `https://hospitalapi.codevertexafrica.com` (prod) |
+| `NEXT_PUBLIC_API_URL` | hospital-api base | `http://localhost:4200` (dev) / `https://afyaapi.codevertexafrica.com` (prod) |
 | `NEXT_PUBLIC_AUTH_URL` | auth-api / SSO base (also used for tenant branding lookups) | `https://sso.codevertexafrica.com` |
 | `NEXT_PUBLIC_SSO_CLIENT_ID` | OIDC client id registered with auth-api | `hospital-ui` |
 | `NEXT_PUBLIC_TENANT_SLUG` | optional default tenant used by the `/` redirect | `codevertex-demo` |
@@ -81,5 +81,5 @@ src/components/          sidebar, header, theme toggle, ui/* (Card, Button, Badg
 ## Deploy
 
 `Dockerfile` mirrors the other Codevertex frontends (multi-stage, Next standalone output,
-`NEXT_PUBLIC_*` build args). Intended deploy target: `https://hospital.codevertexafrica.com`
-talking to `https://hospitalapi.codevertexafrica.com`.
+`NEXT_PUBLIC_*` build args). Intended deploy target: `https://afya.codevertexafrica.com`
+talking to `https://afyaapi.codevertexafrica.com`.

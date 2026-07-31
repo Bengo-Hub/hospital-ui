@@ -13,7 +13,7 @@ RUN npm install -g pnpm@10
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-ARG NEXT_PUBLIC_API_URL=https://hospitalapi.codevertexafrica.com
+ARG NEXT_PUBLIC_API_URL=https://afyaapi.codevertexafrica.com
 ARG NEXT_PUBLIC_AUTH_URL=https://sso.codevertexafrica.com
 ARG NEXT_PUBLIC_SSO_CLIENT_ID=hospital-ui
 ARG NEXT_PUBLIC_TENANT_SLUG=

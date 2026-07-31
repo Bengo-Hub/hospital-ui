@@ -3,7 +3,7 @@ import axios, { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 
 const isDev = process.env.NODE_ENV !== 'production';
 const apiBaseUrl =
     process.env.NEXT_PUBLIC_API_URL ||
-    (isDev ? 'http://localhost:4200' : 'https://hospitalapi.codevertexafrica.com');
+    (isDev ? 'http://localhost:4200' : 'https://afyaapi.codevertexafrica.com');
 
 class ApiClient {
     private instance: AxiosInstance;
