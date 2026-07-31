@@ -70,12 +70,16 @@
   color-scheme: light dark;
   font-feature-settings: "liga" 1, "kern" 1;
   text-rendering: optimizeLegibility;
-  --brand-primary: 37 99 235;
-  --brand-emphasis: 30 58 138;
+  /* Codevertex Afya plum brand (matches the quotation PDF / pricing doc palette:
+     #6d2c6d primary, #3f1a3f emphasis, #faf6ee cream surface). Tenant branding
+     overrides these at runtime via branding-provider; this is the pre-tenant/
+     marketing-page default. */
+  --brand-primary: 109 44 109;
+  --brand-emphasis: 63 26 63;
   --brand-contrast: 255 255 255;
-  --brand-muted: 219 234 254;
-  --brand-surface: 239 246 255;
-  --brand-dark: 23 37 84;
+  --brand-muted: 239 225 236;
+  --brand-surface: 250 246 238;
+  --brand-dark: 44 37 48;
 }
 
 * {
@@ -118,8 +122,8 @@ button:focus-visible {
     --card-foreground: 222 47% 14%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 14%;
-    --primary: 217 91% 50%;
-    --primary-dark: 224 71% 36%;
+    --primary: 300 42% 30%;
+    --primary-dark: 300 42% 17%;
     --primary-foreground: 0 0% 100%;
     --secondary: 214 32% 91%;
     --secondary-foreground: 222 47% 18%;
@@ -131,8 +135,8 @@ button:focus-visible {
     --destructive-foreground: 0 0% 100%;
     --border: 214 28% 86%;
     --input: 214 28% 86%;
-    --ring: 217 91% 50%;
-    --chart-1: 217 91% 50%;
+    --ring: 300 42% 30%;
+    --chart-1: 300 42% 30%;
     --chart-2: 199 89% 48%;
     --chart-3: 262 83% 58%;
     --chart-4: 142 71% 45%;
@@ -152,9 +156,9 @@ button:focus-visible {
     --card-foreground: 210 40% 96%;
     --popover: 222 44% 13%;
     --popover-foreground: 210 40% 96%;
-    --primary: 217 91% 60%;
-    --primary-dark: 224 71% 45%;
-    --primary-foreground: 222 47% 9%;
+    --primary: 300 42% 45%;
+    --primary-dark: 300 42% 30%;
+    --primary-foreground: 0 0% 100%;
     --secondary: 217 33% 22%;
     --secondary-foreground: 210 40% 96%;
     --muted: 217 33% 20%;
@@ -165,8 +169,8 @@ button:focus-visible {
     --destructive-foreground: 0 0% 100%;
     --border: 217 33% 26%;
     --input: 217 33% 26%;
-    --ring: 217 91% 60%;
-    --chart-1: 217 91% 60%;
+    --ring: 300 42% 45%;
+    --chart-1: 300 42% 45%;
     --chart-2: 199 89% 58%;
     --chart-3: 262 83% 68%;
     --chart-4: 142 71% 55%;
