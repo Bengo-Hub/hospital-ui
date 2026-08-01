@@ -36,6 +36,10 @@ interface AuthState {
     error: string | null;
     lastAuthenticatedAt: number | null;
 
+    /** Subscription info fetched lazily after login (undefined = not started, null = loading). */
+    subscriptionInfo: Record<string, unknown> | null | undefined;
+    setSubscriptionInfo: (info: Record<string, unknown> | null) => void;
+
     initialize: () => Promise<void>;
     redirectToSSO: (orgSlug: string, returnTo?: string) => Promise<void>;
     handleSSOCallback: (orgSlug: string, code: string, callbackUrl: string) => Promise<void>;
@@ -50,6 +54,8 @@ export const useAuthStore = create<AuthState>()(
             session: null,
             error: null,
             lastAuthenticatedAt: null,
+            subscriptionInfo: undefined,
+            setSubscriptionInfo: (info: Record<string, unknown> | null) => set({ subscriptionInfo: info }),
 
             initialize: async () => {
                 const { session, user } = get();
@@ -159,7 +165,7 @@ export const useAuthStore = create<AuthState>()(
                     ?? (typeof window !== 'undefined' ? localStorage.getItem('tenantSlug') : null)
                     ?? '';
                 await revokeServerSession(token);
-                set({ status: 'idle', user: null, session: null, lastAuthenticatedAt: null });
+                set({ status: 'idle', user: null, session: null, subscriptionInfo: undefined, lastAuthenticatedAt: null });
                 apiClient.setAccessToken(null);
                 apiClient.setTenantInfo(null, null);
                 if (typeof window !== 'undefined') {

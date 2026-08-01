@@ -1,6 +1,9 @@
 'use client';
 
 import { apiClient } from '@/lib/api/client';
+import { parseLimitInfo } from '@/lib/api/error-handler';
+import { LimitReachedModal } from '@/components/subscription/limit-reached-modal';
+import { useLimitModal } from '@/store/limit-modal';
 import { useAuthStore } from '@/store/auth';
 import { useQueryClient } from '@tanstack/react-query';
 import { useParams, usePathname, useRouter } from 'next/navigation';
@@ -49,9 +52,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         apiClient.setOnServerError((_status, message) => {
             toast.error(message || 'Something went wrong on our end. Please try again.');
         });
+        apiClient.setOnLimitReached((data) => {
+            const info = parseLimitInfo(data);
+            if (info) useLimitModal.getState().show(info);
+        });
         return () => {
             apiClient.setOnSubscription403(null);
             apiClient.setOnServerError(null);
+            apiClient.setOnLimitReached(null);
         };
     }, []);
 
@@ -71,5 +79,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
     }
 
-    return <>{children}</>;
+    return (
+        <>
+            {children}
+            <LimitReachedModal />
+        </>
+    );
 }
