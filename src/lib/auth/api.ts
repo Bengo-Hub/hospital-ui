@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api/client';
+import { revokeServerSession as sharedRevokeServerSession } from '@bengo-hub/shared-ui-lib/auth';
 
 const SSO_BASE_URL =
     process.env.NEXT_PUBLIC_AUTH_URL || process.env.NEXT_PUBLIC_SSO_URL || 'https://sso.codevertexafrica.com';
@@ -100,16 +101,7 @@ export function buildAuthorizeUrl({ codeChallenge, state, redirectUri, scope, te
 }
 
 export async function revokeServerSession(accessToken?: string | null): Promise<void> {
-    try {
-        await fetch(new URL('/api/v1/auth/logout', SSO_BASE_URL).toString(), {
-            method: 'POST',
-            headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-            credentials: 'include',
-            keepalive: true,
-        });
-    } catch {
-        /* best-effort: still clear local state + redirect below */
-    }
+    return sharedRevokeServerSession(SSO_BASE_URL, accessToken);
 }
 
 export async function exchangeCodeForTokens(params: TokenExchangeParams) {
