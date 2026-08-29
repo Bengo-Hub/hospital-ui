@@ -12,16 +12,15 @@
 
   <rect width="640" height="640" fill="url(#bgGrad)"/>
 
-  <!-- soft background blobs -->
-  <circle cx="90" cy="110" r="120" fill="#FAF6EE" opacity="0.06"/>
-  <circle cx="560" cy="520" r="160" fill="#FAF6EE" opacity="0.06"/>
-  <circle cx="540" cy="90" r="60" fill="#FAF6EE" opacity="0.08"/>
+  <!-- soft background blobs, kept near the corners so they never compete with the figure -->
+  <circle cx="70" cy="90" r="100" fill="#FAF6EE" opacity="0.05"/>
+  <circle cx="580" cy="560" r="140" fill="#FAF6EE" opacity="0.05"/>
 
   <!-- floor shadow -->
-  <ellipse cx="320" cy="560" rx="200" ry="24" fill="#000000" opacity="0.15"/>
+  <ellipse cx="320" cy="560" rx="190" ry="22" fill="#000000" opacity="0.15"/>
 
-  <!-- ===== clipboard / tablet with vitals ===== -->
-  <g transform="translate(378 250)">
+  <!-- ===== clipboard / tablet with vitals — kept well inside the safe centre column ===== -->
+  <g transform="translate(360 260)">
     <rect x="0" y="0" width="150" height="200" rx="16" fill="#FAF6EE"/>
     <rect x="14" y="0" width="122" height="14" rx="7" fill="#EFE1EC"/>
     <rect x="46" y="-10" width="58" height="20" rx="8" fill="#EFE1EC"/>
@@ -42,8 +41,9 @@
     <rect x="16" y="172" width="44" height="10" rx="5" fill="#EFE1EC"/>
   </g>
 
-  <!-- ===== clinician figure ===== -->
-  <g transform="translate(150 190)">
+  <!-- ===== clinician figure — centred as a single compact group so cropping (object-cover)
+       never separates the head from the body regardless of container aspect ratio ===== -->
+  <g transform="translate(140 190)">
     <!-- legs -->
     <rect x="34" y="300" width="30" height="90" rx="14" fill="#3F1A3F"/>
     <rect x="86" y="300" width="30" height="90" rx="14" fill="#3F1A3F"/>
@@ -52,29 +52,24 @@
 
     <!-- coat body -->
     <path d="M40 130 C40 110 60 96 78 96 C96 96 116 110 116 130 L128 300 C128 312 118 320 106 320 L50 320 C38 320 28 312 28 300 Z" fill="url(#coatGrad)"/>
-    <!-- coat lapel split -->
     <path d="M78 118 L64 320" stroke="#EFE1EC" stroke-width="3"/>
     <path d="M78 118 L92 320" stroke="#EFE1EC" stroke-width="3"/>
-    <!-- coat buttons -->
     <circle cx="78" cy="180" r="4" fill="#6D2C6D"/>
     <circle cx="78" cy="210" r="4" fill="#6D2C6D"/>
     <circle cx="78" cy="240" r="4" fill="#6D2C6D"/>
 
-    <!-- arm holding tablet (front arm) -->
-    <path d="M112 150 C150 158 178 176 196 200" stroke="url(#coatGrad)" stroke-width="26" stroke-linecap="round"/>
-    <circle cx="200" cy="204" r="15" fill="#3B2A3B"/>
+    <!-- arm reaching toward the clipboard -->
+    <path d="M112 150 C148 158 172 174 188 196" stroke="url(#coatGrad)" stroke-width="26" stroke-linecap="round"/>
+    <circle cx="192" cy="200" r="15" fill="#3B2A3B"/>
 
-    <!-- back arm -->
-    <path d="M42 150 C20 168 10 190 14 216" stroke="url(#coatGrad)" stroke-width="24" stroke-linecap="round"/>
-    <circle cx="15" cy="220" r="14" fill="#3B2A3B"/>
+    <!-- back arm, tucked close to the body (no longer floats off to the far edge) -->
+    <path d="M42 150 C26 164 18 182 20 202" stroke="url(#coatGrad)" stroke-width="24" stroke-linecap="round"/>
+    <circle cx="20" cy="206" r="14" fill="#3B2A3B"/>
 
-    <!-- neck -->
+    <!-- neck + head -->
     <rect x="66" y="80" width="24" height="26" rx="10" fill="#3B2A3B"/>
-    <!-- head -->
     <circle cx="78" cy="62" r="38" fill="#4A3548"/>
-    <!-- hair -->
     <path d="M40 56 C40 26 60 12 78 12 C98 12 116 28 116 56 C116 40 102 30 78 30 C56 30 40 40 40 56 Z" fill="#2C2530"/>
-    <!-- simple face -->
     <circle cx="66" cy="64" r="4" fill="#FAF6EE"/>
     <circle cx="90" cy="64" r="4" fill="#FAF6EE"/>
     <path d="M64 80 Q78 90 92 80" stroke="#FAF6EE" stroke-width="3" stroke-linecap="round" fill="none"/>
@@ -88,13 +83,9 @@
     <circle cx="77" cy="184" r="10" fill="#3F1A3F"/>
   </g>
 
-  <!-- floating plus badges -->
-  <g opacity="0.85">
-    <circle cx="500" cy="150" r="22" fill="#FAF6EE" opacity="0.9"/>
-    <path d="M500 140v20M490 150h20" stroke="#6D2C6D" stroke-width="5" stroke-linecap="round"/>
-  </g>
-  <g opacity="0.7">
-    <circle cx="120" cy="480" r="16" fill="#FAF6EE" opacity="0.8"/>
-    <path d="M120 473v14M113 480h14" stroke="#6D2C6D" stroke-width="4" stroke-linecap="round"/>
+  <!-- single, understated plus badge — inside the safe zone, never near an edge that could crop -->
+  <g opacity="0.5">
+    <circle cx="480" cy="150" r="20" fill="#FAF6EE" opacity="0.85"/>
+    <path d="M480 141v18M471 150h18" stroke="#6D2C6D" stroke-width="5" stroke-linecap="round"/>
   </g>
 </svg>
