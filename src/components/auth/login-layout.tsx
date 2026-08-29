@@ -27,22 +27,23 @@ export function LoginLayout({ title, subtitle, children, footerSlot }: LoginLayo
           </div>
           {children}
           {footerSlot && <div className="mt-8">{footerSlot}</div>}
-
-          <div className="mt-8 pt-6 border-t border-border">
-            <p className="text-sm font-bold text-foreground leading-snug">
-              One patient record, every department — reception to discharge.
-            </p>
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              SHA/SHIF &amp; Taifa Care claims-ready · M-Pesa built in · KRA eTIMS opt-in
-            </p>
-          </div>
         </div>
       </div>
 
-      {/* Pure illustration, no text overlaid on it — nothing to collide with whatever
-       *  object-cover happens to crop at any given viewport size. */}
-      <div className="hidden lg:block relative overflow-hidden bg-brand-emphasis">
+      {/* Illustration's own top ~30% (see login-hero.svg's comment) is plain background — the
+       *  clinician figure starts well below it — so the tagline sits there, never over the art
+       *  itself. A top-to-transparent scrim guarantees contrast regardless of viewport crop. */}
+      <div className="hidden lg:flex relative flex-col overflow-hidden bg-brand-emphasis">
         <img src="/illustrations/login-hero.svg" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+        <div className="absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-brand-emphasis/90 to-transparent" />
+        <div className="relative z-10 px-10 pt-10 max-w-md">
+          <p className="text-lg font-bold leading-snug text-brand-contrast">
+            One patient record, every department — reception to discharge.
+          </p>
+          <p className="mt-2 text-sm text-brand-contrast/80">
+            SHA/SHIF &amp; Taifa Care claims-ready · M-Pesa built in · KRA eTIMS opt-in
+          </p>
+        </div>
       </div>
     </div>
   );
