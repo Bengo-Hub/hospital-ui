@@ -2,11 +2,13 @@
 
 **Status:** ⏳ Planned
 **Depends on:** `hospital-api` Sprint 10/11
-**Goal:** ANC/PNC/ART/TB/Immunization/Morgue module UIs, occupancy/revenue/throughput dashboards, KHIS export screen.
+**Goal:** ANC/PNC/ART/TB/Immunization/VMMC/PMTCT-EID/cancer-screening/Morgue module UIs,
+occupancy/revenue/throughput dashboards, KHIS export screen. Programme list expanded 2026-08-29 to
+match `hospital-api`'s own Sprint 10 update — see `hospital-api/docs/kenyaemr-technical-reference.md` §4.
 
 ## Pages / Components
 
-- `/[orgSlug]/programmes/{anc,pnc,art,tb,immunization,morgue}` — one CRUD surface per programme.
+- `/[orgSlug]/programmes/{anc,pnc,art,tb,immunization,vmmc,hei,cancer-screening,morgue}` — one CRUD surface per programme. The ART programme's form includes an OTZ (Operation Triple Zero) adolescent-cohort toggle rather than a separate page.
 - `/[orgSlug]/reports` — dashboards per `docs/ux-ui.md`'s Charts & Data guidance (legend, tooltip,
   table alternative, meaningful empty states). Revenue chart data comes from hospital-api, which
   itself delegates to treasury-api — the UI never computes financial aggregates client-side.

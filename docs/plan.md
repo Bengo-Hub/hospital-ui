@@ -1,7 +1,7 @@
 # Hospital UI (Codevertex Afya) — Plan
 
 **Service:** hospital-ui
-**Last updated:** 2026-07-31
+**Last updated:** 2026-08-29
 **Status:** Sprint-0 scaffold (Next.js app shell + placeholder dashboard, no domain pages yet — mirrors the `hospital-api` backend's own "empty but buildable" Sprint-0 philosophy).
 
 ---
@@ -50,7 +50,7 @@ two lighter API sprints into one UI sprint).
 | 7 | Theatre/OT scheduling + ICU monitoring board |
 | 8 | Blood Bank & Transfusion |
 | 9 | Ambulance dispatch + Biomedical Equipment (asset) views |
-| 10 | Specialized programmes + reporting/KHIS export |
+| 10 | Specialized programmes (ANC/PNC/ART-OTZ/TB/Immunization/VMMC/PMTCT-EID/cancer screening) + reporting/KHIS export |
 
 ## References
 
@@ -58,3 +58,5 @@ two lighter API sprints into one UI sprint).
 - [UX/UI Design Guidance](ux-ui.md)
 - [Sprint Plans](sprints/)
 - `hospital-service/hospital-api/docs/` — the backend contract this UI is built against
+- `hospital-service/hospital-api/docs/kenyaemr-technical-reference.md` — the KenyaEMR technical
+  audit behind this doc's 2026-08-29 programme-list and billing-status updates
