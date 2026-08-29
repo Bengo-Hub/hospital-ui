@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Card, Button, Badge, Input } from '@/components/ui/base';
+import { Card, Button, Badge } from '@/components/ui/base';
 import { EmptyState, Skeleton } from '@/components/ui/page';
 import { Can } from '@/components/auth/can';
 import { apiErrorMessage } from '@/lib/api/error-message';
@@ -29,6 +29,7 @@ import {
   useDispensePrescription,
 } from '@/hooks/usePharmacy';
 import type { DispenseLineInput, PrescriptionStatus } from '@/lib/api/pharmacy';
+import { WitnessConfirmForm, type ConfirmedWitness } from './witness-confirm-form';
 
 const STATUS_LABELS: Record<PrescriptionStatus, string> = {
   pending: 'Pending',
@@ -63,7 +64,6 @@ const TERMINAL_STATUSES: PrescriptionStatus[] = ['dispensed', 'rejected', 'cance
 interface DispenseDraft {
   quantity: string;
   requiresWitness: boolean;
-  witnessStaffId: string;
 }
 
 export default function PrescriptionDetailPage() {
@@ -85,6 +85,11 @@ export default function PrescriptionDetailPage() {
   const [cancelReason, setCancelReason] = useState('');
   const [showDispense, setShowDispense] = useState(false);
   const [dispenseDraft, setDispenseDraft] = useState<Record<string, DispenseDraft>>({});
+  // One witness confirmation covers every witness-requiring line in this dispense action (see
+  // witness-confirm-form.tsx's doc comment on ConfirmedWitness for why) — never persisted, held
+  // only for the lifetime of this open modal.
+  const [confirmedWitness, setConfirmedWitness] = useState<ConfirmedWitness | null>(null);
+  const [witnessNotice, setWitnessNotice] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -119,10 +124,12 @@ export default function PrescriptionDetailPage() {
     lines.forEach((l) => {
       const remaining = l.quantity_prescribed - l.quantity_dispensed;
       if (remaining > 0) {
-        initial[l.id] = { quantity: String(remaining), requiresWitness: false, witnessStaffId: '' };
+        initial[l.id] = { quantity: String(remaining), requiresWitness: false };
       }
     });
     setDispenseDraft(initial);
+    setConfirmedWitness(null);
+    setWitnessNotice(null);
     setShowDispense(true);
   };
 
@@ -169,21 +176,25 @@ export default function PrescriptionDetailPage() {
     }
   };
 
+  const anyLineRequiresWitness = Object.values(dispenseDraft).some((d) => d.requiresWitness);
+
   const handleDispense = async () => {
+    if (anyLineRequiresWitness && !confirmedWitness) {
+      toast.error('Confirm a witness before dispensing a controlled/scheduled substance line');
+      return;
+    }
     const dispenseLines: DispenseLineInput[] = [];
     for (const [lineId, draft] of Object.entries(dispenseDraft)) {
       const qty = Number(draft.quantity);
       if (!qty || qty <= 0) continue;
-      if (draft.requiresWitness && !draft.witnessStaffId.trim()) {
-        const line = lines.find((l) => l.id === lineId);
-        toast.error(`Enter a witness staff ID for ${line?.drug_name ?? 'this line'} — required when "Requires witness" is checked`);
-        return;
-      }
       dispenseLines.push({
         line_id: lineId,
         quantity_to_dispense: qty,
         requires_witness: draft.requiresWitness || undefined,
-        witness_staff_id: draft.requiresWitness ? draft.witnessStaffId.trim() : undefined,
+        // The SAME confirmed witness token is sent for every witnessed line — see
+        // witness-confirm-form.tsx's ConfirmedWitness doc comment for why one confirmation
+        // covers the whole dispense action.
+        witness_token: draft.requiresWitness ? confirmedWitness?.token : undefined,
       });
     }
     if (dispenseLines.length === 0) {
@@ -198,7 +209,18 @@ export default function PrescriptionDetailPage() {
       setShowDispense(false);
       toast.success(updated.status === 'partially_dispensed' ? 'Partial dispense recorded' : 'Prescription dispensed');
     } catch (e) {
-      toast.error(await apiErrorMessage(e, 'Failed to dispense prescription'));
+      const message = await apiErrorMessage(e, 'Failed to dispense prescription');
+      // The witness token is only valid for 120s (see VerifyWitness's expires_in) — if the
+      // pharmacist took longer than that to submit, hospital-api rejects it at dispense time
+      // rather than a generic failure. Surface that as a clear, actionable prompt to re-confirm
+      // instead of a generic error toast, and drop back to the credentials form.
+      if (/witness/i.test(message)) {
+        setConfirmedWitness(null);
+        setWitnessNotice('Witness confirmation expired, please confirm again');
+        toast.error('Witness confirmation expired, please confirm again');
+        return;
+      }
+      toast.error(message);
     }
   };
 
@@ -206,10 +228,13 @@ export default function PrescriptionDetailPage() {
   const canLock = rx.status === 'approved';
   const canDispense = rx.status === 'approved' || rx.status === 'locked' || rx.status === 'partially_dispensed';
   const canRejectOrCancel = !TERMINAL_STATUSES.includes(rx.status) && rx.status !== 'partially_dispensed';
-  // Per hospital-api's contract, an override_reason is required specifically for the 'flagged'
-  // status (a drug-interaction/allergy finding) — 'pharmacist_review' approves normally via the
-  // plain Approve button above.
-  const needsOverrideReason = rx.status === 'flagged';
+  // Per hospital-api's contract, an override_reason is required for BOTH the 'flagged' status (a
+  // minor/moderate drug-interaction/allergy finding) and the stricter 'pharmacist_review' status
+  // (a major/contraindicated interaction) — pharmacist_review is the more serious of the two, so
+  // it must never require less friction to approve than flagged does. See
+  // pharmacy.Service.ApprovePrescription's own override-reason gate in hospital-api, which checks
+  // both statuses identically.
+  const needsOverrideReason = rx.status === 'flagged' || rx.status === 'pharmacist_review';
 
   const fieldCls = 'text-sm text-foreground font-medium';
   const labelCls = 'text-xs text-muted-foreground mb-0.5';
@@ -334,7 +359,8 @@ export default function PrescriptionDetailPage() {
                 <h2 className="font-bold text-base leading-tight">Dispense Prescription</h2>
                 <p className="text-xs text-muted-foreground">
                   Reduce a quantity below the remaining amount for a partial dispense. Check &quot;Requires
-                  witness&quot; for any controlled/scheduled drug and name a different staff member as witness.
+                  witness&quot; for any controlled/scheduled drug, then have a different staff member confirm
+                  as witness below.
                 </p>
               </div>
             </div>
@@ -380,18 +406,19 @@ export default function PrescriptionDetailPage() {
                           <ShieldAlert className="h-3.5 w-3.5 text-amber-600" />
                           Requires witness (controlled/scheduled substance)
                         </label>
-                        {draft.requiresWitness && (
-                          <Input
-                            value={draft.witnessStaffId}
-                            onChange={(e) =>
-                              setDispenseDraft((prev) => ({ ...prev, [line.id]: { ...prev[line.id], witnessStaffId: e.target.value } }))
-                            }
-                            placeholder="Witness staff ID or name (must be a different staff member)"
-                          />
-                        )}
                       </div>
                     );
                   })
+              )}
+              {anyLineRequiresWitness && (
+                <WitnessConfirmForm
+                  confirmedWitness={confirmedWitness}
+                  onConfirmed={(w) => {
+                    setConfirmedWitness(w);
+                    setWitnessNotice(null);
+                  }}
+                  noticeMessage={witnessNotice}
+                />
               )}
             </div>
             <div className="flex gap-3">
@@ -401,7 +428,11 @@ export default function PrescriptionDetailPage() {
               <Button
                 className="flex-1 gap-2"
                 onClick={handleDispense}
-                disabled={dispense.isPending || Object.keys(dispenseDraft).length === 0}
+                disabled={
+                  dispense.isPending ||
+                  Object.keys(dispenseDraft).length === 0 ||
+                  (anyLineRequiresWitness && !confirmedWitness)
+                }
               >
                 {dispense.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pill className="h-4 w-4" />}
                 Confirm Dispense

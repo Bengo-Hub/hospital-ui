@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
-import { pharmacyApi, type CreatePrescriptionInput, type DispenseInput } from '@/lib/api/pharmacy';
+import { pharmacyApi, type CreatePrescriptionInput, type DispenseInput, type VerifyWitnessInput } from '@/lib/api/pharmacy';
 
 function useOrgSlug(): string {
   const params = useParams();
@@ -80,5 +80,16 @@ export function useDispensePrescription() {
       qc.invalidateQueries({ queryKey: ['hospital', 'prescriptions', orgSlug] });
       qc.invalidateQueries({ queryKey: ['hospital', 'controlled-substances', orgSlug] });
     },
+  });
+}
+
+// Step 1 of the controlled-substance dual-witness flow (see lib/api/pharmacy.ts's
+// VerifyWitnessInput/Result). Deliberately NOT cached/invalidating any query — this mutation only
+// mints a short-lived, in-memory witness_token for the dispense modal to hold and send back on
+// Step 2 (Dispense); it never touches persisted prescription/dispense state itself.
+export function useVerifyWitness() {
+  const orgSlug = useOrgSlug();
+  return useMutation({
+    mutationFn: (data: VerifyWitnessInput) => pharmacyApi.verifyWitness(orgSlug, data),
   });
 }

@@ -79,7 +79,16 @@ export interface DispenseLineInput {
   line_id: string;
   quantity_to_dispense: number;
   requires_witness?: boolean;
-  witness_staff_id?: string;
+  // witness_token is the short-lived token minted by POST .../pharmacy/verify-witness after the
+  // witness re-authenticated with THEIR OWN credentials (see pharmacyApi.verifyWitness). There is
+  // deliberately no witness_staff_id field any more — the backend closed that client-suppliable
+  // identity path entirely (2026-08-29 security fix): a plain client-supplied staff UUID could
+  // name ANY staff member as "witness" with zero verification. One token, minted from one
+  // confirmation, is reusable across every witnessed line in the same dispense request within its
+  // 120s TTL — see pharmacy.Service.Dispense's per-line loop in hospital-api, which validates each
+  // line's token independently (stateless JWT check, no single-use/consumption tracking) rather
+  // than requiring a distinct token per line.
+  witness_token?: string;
 }
 
 export interface DispenseInput {
@@ -87,6 +96,25 @@ export interface DispenseInput {
   patient_id_number?: string;
   outlet_id?: string;
   lines: DispenseLineInput[];
+}
+
+/** Step 1 of the controlled-substance dual-witness flow — the WITNESS's own credentials, never
+ * the dispensing user's. Mirrors hospital-api's verifyWitnessRequest (handlers/pharmacy.go). */
+export interface VerifyWitnessInput {
+  email: string;
+  password: string;
+  totp_code?: string;
+}
+
+/** Response from POST .../pharmacy/verify-witness — either an MFA challenge to resubmit with
+ * totp_code filled in, or a minted short-lived witness_token + witness_name on success. */
+export interface VerifyWitnessResult {
+  mfa_required?: boolean;
+  mfa_method?: string;
+  user_id?: string;
+  witness_token?: string;
+  witness_name?: string;
+  expires_in?: number;
 }
 
 export interface ControlledSubstanceLog {
@@ -126,6 +154,8 @@ export const pharmacyApi = {
     apiClient.post<Prescription>(`${hospitalBase(orgSlug)}/prescriptions/${id}/cancel`, { reason }),
   dispense: (orgSlug: string, id: string, data: DispenseInput) =>
     apiClient.post<Prescription>(`${hospitalBase(orgSlug)}/prescriptions/${id}/dispense`, data),
+  verifyWitness: (orgSlug: string, data: VerifyWitnessInput) =>
+    apiClient.post<VerifyWitnessResult>(`${hospitalBase(orgSlug)}/pharmacy/verify-witness`, data),
   listControlledSubstanceLogs: async (orgSlug: string): Promise<ControlledSubstanceLog[]> => {
     const res = await apiClient.get<{ data: ControlledSubstanceLog[] }>(`${hospitalBase(orgSlug)}/pharmacy/controlled-substances`);
     return unwrapList(res);
