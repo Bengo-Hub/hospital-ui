@@ -1,56 +1,19 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import {
-  Banknote,
-  Bed,
-  ClipboardList,
-  FlaskConical,
-  LayoutDashboard,
-  Lock,
-  LogOut,
-  Pill,
-  Users,
-  X,
-} from 'lucide-react';
+import { ChevronDown, Lock, LogOut, X } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, usePathname } from 'next/navigation';
+import { useState } from 'react';
 import { useBranding } from '@/providers/branding-provider';
 import { useAuthStore } from '@/store/auth';
-import { facilityModulesFor, useFacilityType, type NavModuleKey } from '@/lib/facility-nomenclature';
+import { facilityModulesFor, useFacilityType } from '@/lib/facility-nomenclature';
+import { NAV_ENTRIES, isNavGroup, type NavItem, type NavGroup } from '@/lib/nav-config';
 
 interface SidebarProps {
   open?: boolean;
   onClose?: () => void;
 }
-
-interface NavItem {
-  label: string;
-  icon: React.ElementType;
-  href: string;
-  /** Which facility types see this item at all — gated in facility-nomenclature.ts. */
-  module: NavModuleKey;
-  /**
-   * Sprint 1-5 built the hospital-api backend for this module but hospital-ui has no frontend
-   * page behind it yet (Phase 7 builds the pages) — render as locked rather than a link that
-   * 404s. 'appointments'/'admissions' have no backend either (Sprint 6-10) and stay locked at
-   * every facility type regardless.
-   */
-  comingSoon?: boolean;
-}
-
-// Every item hospital-ui could ever show. Which ones actually render for the current tenant is
-// decided by facilityModulesFor(useFacilityType()) below — a module outside that set is hidden
-// entirely (not rendered, not shown locked), per docs/ux-ui.md's "hiding beats disabling" rule.
-const ALL_NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', module: 'dashboard' },
-  { label: 'Patients', icon: Users, href: '/patients', module: 'patients', comingSoon: true },
-  { label: 'Appointments', icon: ClipboardList, href: '/appointments', module: 'appointments', comingSoon: true },
-  { label: 'Admissions & Beds', icon: Bed, href: '/admissions', module: 'admissions', comingSoon: true },
-  { label: 'Laboratory', icon: FlaskConical, href: '/laboratory', module: 'laboratory', comingSoon: true },
-  { label: 'Pharmacy', icon: Pill, href: '/pharmacy', module: 'pharmacy', comingSoon: true },
-  { label: 'Billing', icon: Banknote, href: '/billing', module: 'billing', comingSoon: true },
-];
 
 function NavLink({ item, orgSlug, onClose }: { item: NavItem; orgSlug: string; onClose?: () => void }) {
   const pathname = usePathname();
@@ -91,6 +54,50 @@ function NavLink({ item, orgSlug, onClose }: { item: NavItem; orgSlug: string; o
   );
 }
 
+/** Whether a chained sub-module dropdown should start open — either it's not collapsed-by-default,
+ * or it already contains the current route (so navigating straight to a sub-page never hides it
+ * behind a closed chevron on load). */
+function isGroupInitiallyOpen(group: NavGroup, orgSlug: string, pathname: string | null): boolean {
+  if (!group.defaultCollapsed) return true;
+  return group.items.some((item) => pathname === `/${orgSlug}${item.href}`);
+}
+
+function NavGroupSection({ group, orgSlug, onClose }: { group: NavGroup; orgSlug: string; onClose?: () => void }) {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(() => isGroupInitiallyOpen(group, orgSlug, pathname));
+  const Icon = group.icon;
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className={cn(
+          'group flex w-full items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-sm',
+          'text-sidebar-foreground/55 hover:text-sidebar-foreground hover:bg-sidebar-foreground/8 font-medium'
+        )}
+      >
+        <Icon className="h-4.5 w-4.5 shrink-0 transition-transform duration-200 group-hover:scale-110" />
+        <span className="truncate flex-1 text-left">{group.label}</span>
+        <ChevronDown
+          className={cn(
+            'h-3.5 w-3.5 shrink-0 text-sidebar-foreground/35 transition-transform duration-200 group-hover:text-sidebar-foreground/60',
+            open && 'rotate-180'
+          )}
+        />
+      </button>
+      {open && (
+        <div className="ml-4 mt-0.5 space-y-0.5 border-l border-sidebar-border pl-3">
+          {group.items.map((item) => (
+            <NavLink key={item.href} item={item} orgSlug={orgSlug} onClose={onClose} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Sidebar({ open = false, onClose }: SidebarProps) {
   const params = useParams();
   const orgSlug = params?.orgSlug as string;
@@ -100,7 +107,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const facilityType = useFacilityType();
 
   const visibleModules = new Set(facilityModulesFor(facilityType));
-  const navItems = ALL_NAV_ITEMS.filter((item) => visibleModules.has(item.module));
+  const navEntries = NAV_ENTRIES.filter((entry) => visibleModules.has(entry.module));
 
   const displayName = user?.fullName || tenant?.orgName || orgSlug;
   const displayInitial = displayName?.[0]?.toUpperCase() ?? '?';
@@ -127,9 +134,13 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5 scrollbar-hide">
-        {navItems.map((item) => (
-          <NavLink key={item.href} item={item} orgSlug={orgSlug} onClose={onClose} />
-        ))}
+        {navEntries.map((entry) =>
+          isNavGroup(entry) ? (
+            <NavGroupSection key={entry.label} group={entry} orgSlug={orgSlug} onClose={onClose} />
+          ) : (
+            <NavLink key={entry.href} item={entry} orgSlug={orgSlug} onClose={onClose} />
+          )
+        )}
       </nav>
 
       <div className="px-3 py-4 border-t border-sidebar-border">
