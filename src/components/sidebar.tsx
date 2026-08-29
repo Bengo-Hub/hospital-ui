@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { useParams, usePathname } from 'next/navigation';
 import { useBranding } from '@/providers/branding-provider';
 import { useAuthStore } from '@/store/auth';
+import { facilityModulesFor, useFacilityType, type NavModuleKey } from '@/lib/facility-nomenclature';
 
 interface SidebarProps {
   open?: boolean;
@@ -27,18 +28,28 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   href: string;
-  /** Sprint-0: hospital-api has no domain endpoints for this module yet — render as locked. */
+  /** Which facility types see this item at all — gated in facility-nomenclature.ts. */
+  module: NavModuleKey;
+  /**
+   * Sprint 1-5 built the hospital-api backend for this module but hospital-ui has no frontend
+   * page behind it yet (Phase 7 builds the pages) — render as locked rather than a link that
+   * 404s. 'appointments'/'admissions' have no backend either (Sprint 6-10) and stay locked at
+   * every facility type regardless.
+   */
   comingSoon?: boolean;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
-  { label: 'Patients', icon: Users, href: '/patients', comingSoon: true },
-  { label: 'Appointments', icon: ClipboardList, href: '/appointments', comingSoon: true },
-  { label: 'Admissions & Beds', icon: Bed, href: '/admissions', comingSoon: true },
-  { label: 'Laboratory', icon: FlaskConical, href: '/laboratory', comingSoon: true },
-  { label: 'Pharmacy', icon: Pill, href: '/pharmacy', comingSoon: true },
-  { label: 'Billing', icon: Banknote, href: '/billing', comingSoon: true },
+// Every item hospital-ui could ever show. Which ones actually render for the current tenant is
+// decided by facilityModulesFor(useFacilityType()) below — a module outside that set is hidden
+// entirely (not rendered, not shown locked), per docs/ux-ui.md's "hiding beats disabling" rule.
+const ALL_NAV_ITEMS: NavItem[] = [
+  { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', module: 'dashboard' },
+  { label: 'Patients', icon: Users, href: '/patients', module: 'patients', comingSoon: true },
+  { label: 'Appointments', icon: ClipboardList, href: '/appointments', module: 'appointments', comingSoon: true },
+  { label: 'Admissions & Beds', icon: Bed, href: '/admissions', module: 'admissions', comingSoon: true },
+  { label: 'Laboratory', icon: FlaskConical, href: '/laboratory', module: 'laboratory', comingSoon: true },
+  { label: 'Pharmacy', icon: Pill, href: '/pharmacy', module: 'pharmacy', comingSoon: true },
+  { label: 'Billing', icon: Banknote, href: '/billing', module: 'billing', comingSoon: true },
 ];
 
 function NavLink({ item, orgSlug, onClose }: { item: NavItem; orgSlug: string; onClose?: () => void }) {
@@ -86,6 +97,10 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const { tenant } = useBranding();
   const logout = useAuthStore((s) => s.logout);
   const user = useAuthStore((s) => s.user);
+  const facilityType = useFacilityType();
+
+  const visibleModules = new Set(facilityModulesFor(facilityType));
+  const navItems = ALL_NAV_ITEMS.filter((item) => visibleModules.has(item.module));
 
   const displayName = user?.fullName || tenant?.orgName || orgSlug;
   const displayInitial = displayName?.[0]?.toUpperCase() ?? '?';
@@ -112,7 +127,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5 scrollbar-hide">
-        {NAV_ITEMS.map((item) => (
+        {navItems.map((item) => (
           <NavLink key={item.href} item={item} orgSlug={orgSlug} onClose={onClose} />
         ))}
       </nav>

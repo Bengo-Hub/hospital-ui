@@ -39,8 +39,11 @@ export function useSubscription() {
     setSubscriptionInfo(null);
 
     if (!tenantId || isPlatformOwner) {
-      const platformRaw = { plan: 'ENTERPRISE', status: 'ACTIVE', features: [], limits: {} };
-      setSubscriptionInfo({ status: 'active', planCode: 'enterprise', planName: 'Enterprise', features: [], limits: {} } as unknown as Record<string, unknown>);
+      // Platform owner / no-tenant: fully entitled, default to the top facility tier so the
+      // adaptive sidebar (facility-nomenclature.ts) shows every built module rather than
+      // collapsing to a facility_type it never actually resolved.
+      const platformRaw = { plan: 'ENTERPRISE', status: 'ACTIVE', features: [], limits: {}, facilityType: 'hospital' };
+      setSubscriptionInfo({ status: 'active', planCode: 'enterprise', planName: 'Enterprise', features: [], limits: {}, facilityType: 'hospital' } as unknown as Record<string, unknown>);
       useSubscriptionStore.getState().setFromRaw(platformRaw, tenantSlug ?? '');
       return;
     }
@@ -60,6 +63,7 @@ export function useSubscription() {
           planName: '',
           features: cached.features ?? [],
           limits: cached.limits ?? {},
+          facilityType: cached.facilityType ?? undefined,
         } as unknown as Record<string, unknown>);
       } else {
         // No cache yet: "unknown" is deliberately NOT "none", so needsSubscription stays false
@@ -88,6 +92,7 @@ export function useSubscription() {
             expiresAt: info.currentPeriodEnd ?? info.trialEndsAt ?? null,
             features: info.features,
             limits: info.limits,
+            facilityType: info.facilityType ?? null,
           },
           tenantSlug ?? '',
         );
@@ -111,7 +116,7 @@ export function useSubscription() {
               if (!info) return;
               setSubscriptionInfo(info as unknown as Record<string, unknown>);
               useSubscriptionStore.getState().setFromRaw(
-                { plan: info.planCode || null, status: info.status || null, expiresAt: info.currentPeriodEnd ?? info.trialEndsAt ?? null, features: info.features, limits: info.limits },
+                { plan: info.planCode || null, status: info.status || null, expiresAt: info.currentPeriodEnd ?? info.trialEndsAt ?? null, features: info.features, limits: info.limits, facilityType: info.facilityType ?? null },
                 tenantSlug,
               );
             })
@@ -131,6 +136,7 @@ export function useSubscription() {
     status: subStatus,
     plan: info?.planCode ?? null,
     tierOrder: info?.tierOrder ?? null,
+    facilityType: info?.facilityType ?? null,
     isActive: subStatus === 'active' || subStatus === 'trial' || isExempt,
     isPastDue: subStatus === 'past_due' || subStatus === 'suspended',
     isExpired: subStatus === 'expired' || subStatus === 'cancelled',
@@ -139,6 +145,7 @@ export function useSubscription() {
     isPlatformOwner,
     isServiceCharge,
     isDemo,
+    isExempt,
     hasFeature: (code: string) => isExempt || (info?.features?.includes(code) ?? false),
     getLimit: (key: string) => (isExempt ? Infinity : (info?.limits?.[key] ?? Infinity)),
     store: subStore,

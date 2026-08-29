@@ -13,6 +13,14 @@ export interface SubscriptionInfo {
   limits: Record<string, number>;
   trialEndsAt?: string;
   currentPeriodEnd?: string;
+  /**
+   * Facility-type hint for hospital-api's Afya plan family: "chemist" | "clinic" | "facility" |
+   * "hospital" — sourced from subscriptions-api's SubscriptionResult.facility_type (the plan's
+   * Metadata, see cmd/seed/plans_hospital.go's afyaTier.facilityType). Drives the adaptive
+   * sidebar (see lib/facility-nomenclature.ts). Undefined for a non-Afya plan or before the
+   * subscription lookup resolves — callers must supply their own fallback.
+   */
+  facilityType?: string;
 }
 
 /**
@@ -66,6 +74,7 @@ export async function fetchSubscriptionInfo(
       limits: sub.limits ?? {},
       trialEndsAt: sub.trial_ends_at ?? sub.trialEndsAt,
       currentPeriodEnd: sub.current_period_end ?? sub.currentPeriodEnd,
+      facilityType: sub.facility_type ?? sub.facilityType,
     };
   } catch {
     return null;

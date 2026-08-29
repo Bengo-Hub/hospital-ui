@@ -1,6 +1,14 @@
 # Hospital UI — Sprint 5: Billing & Patient Accounts (Insurance)
 
-**Status:** ⏳ Planned
+**Status:** ⏳ Planned — no hospital-ui code has been touched. **Update (2026-08-29):** the backend
+this sprint builds against is no longer just a design spec — `hospital-api`'s Sprint 5 core
+(`hospital-api@126adbf`) shipped real endpoints (`GET /patients/{id}/account`, `GET /billing/queue`,
+`POST /billing/charges/{id}/collect`, `POST /billing/accounts/{id}/settle`,
+`POST /billing/accounts/{id}/override-settlement`) plus `collect_own`/`collect_any`/
+`override_settlement` RBAC permissions and the `RoleCashier` role. The insurance
+eligibility/claim-submit endpoints described below are **not yet built** on the backend either
+(client + treasury-api S2S routes exist, no hospital-api handler calls them yet) — the pages/
+components below remain accurate as the target design, this is a status update, not a rewrite.
 **Depends on:** `hospital-api` Sprint 5
 **Goal:** A distributed billing ledger UI — every department's own "collect payment for what I
 charged" surface, a Billing-desk fallback queue, a patient account/ledger view any department can

@@ -24,6 +24,8 @@ export interface SubscriptionState {
   isInGracePeriod: boolean;
   isExpired: boolean;
   daysUntilExpiry: number | null;
+  /** Afya facility-type hint ("chemist"|"clinic"|"facility"|"hospital") — see lib/facility-nomenclature.ts. */
+  facilityType: string | null;
 }
 
 interface SubscriptionStore extends SubscriptionState {
@@ -39,6 +41,7 @@ interface RawSubscriptionData {
   expiresAt?: string | null;
   features?: string[];
   limits?: Record<string, number>;
+  facilityType?: string | null;
 }
 
 function computeDerivedFields(
@@ -134,6 +137,7 @@ const EMPTY_STATE: SubscriptionState = {
   isInGracePeriod: false,
   isExpired: false,
   daysUntilExpiry: null,
+  facilityType: null,
 };
 
 export const useSubscriptionStore = create<SubscriptionStore>((set) => ({
@@ -146,6 +150,7 @@ export const useSubscriptionStore = create<SubscriptionStore>((set) => ({
     const expiresAt = raw.expiresAt ? new Date(raw.expiresAt) : null;
     const features = raw.features ?? [];
     const limits = raw.limits ?? {};
+    const facilityType = raw.facilityType ?? null;
     const derived = computeDerivedFields(status, expiresAt);
 
     const state: SubscriptionState = {
@@ -154,6 +159,7 @@ export const useSubscriptionStore = create<SubscriptionStore>((set) => ({
       expiresAt,
       features,
       limits,
+      facilityType,
       ...derived,
     };
 
@@ -165,6 +171,7 @@ export const useSubscriptionStore = create<SubscriptionStore>((set) => ({
       expiresAt: expiresAt?.toISOString() ?? null,
       features,
       limits,
+      facilityType,
     };
     idbSet(`subscription_${tenantSlug}`, serializable).catch(() => {});
   },
@@ -181,6 +188,7 @@ export const useSubscriptionStore = create<SubscriptionStore>((set) => ({
     const expiresAt = data.expiresAt ? new Date(data.expiresAt) : null;
     const features = data.features ?? [];
     const limits = data.limits ?? {};
+    const facilityType = data.facilityType ?? null;
     const derived = computeDerivedFields(status, expiresAt);
 
     set({
@@ -189,6 +197,7 @@ export const useSubscriptionStore = create<SubscriptionStore>((set) => ({
       expiresAt,
       features,
       limits,
+      facilityType,
       ...derived,
       hydrated: true,
     });
