@@ -3,9 +3,6 @@ import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
-const DEMO_SLUG = process.env.NEXT_PUBLIC_TENANT_SLUG || 'codevertex-demo';
-const DEMO_LOGIN_HREF = `/${DEMO_SLUG}/login`;
-
 const TRUST_STRIP = [
   'SHA/SHIF & NHIF claims-ready',
   'M-Pesa & card built in',
@@ -39,12 +36,12 @@ export function HeroSection() {
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-1">
-              <Link href={DEMO_LOGIN_HREF}>
+              <Link href="/">
                 <Button size="lg" className="bg-brand-primary text-brand-contrast hover:bg-brand-emphasis gap-2">
                   Try the Demo <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
-              <Link href={DEMO_LOGIN_HREF}>
+              <Link href="/">
                 <Button size="lg" variant="outline" className="border-brand-primary/30 text-brand-emphasis hover:bg-brand-primary/5">
                   Sign In
                 </Button>

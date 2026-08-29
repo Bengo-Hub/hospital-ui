@@ -127,6 +127,55 @@ export async function exchangeCodeForTokens(params: TokenExchangeParams) {
     return response.json();
 }
 
+export interface PasswordLoginParams {
+    email: string;
+    password: string;
+    tenantSlug: string;
+    totpCode?: string;
+}
+
+/** Either a full token grant, or an MFA challenge the caller must resubmit with totp_code. */
+export type PasswordLoginResult =
+    | { mfaRequired: true; mfaMethod: string; userId: string }
+    | { mfaRequired: false; accessToken: string; refreshToken?: string; expiresIn: number };
+
+/**
+ * Direct email+password login against auth-api's own public POST /auth/login — the same
+ * endpoint every Codevertex login page (and hospital-api's own controlled-substance witness
+ * re-authentication, see hospital-api's authapi.Client) already calls. auth-api's CORS policy
+ * already allows any *.codevertexafrica.com origin (see auth-api/internal/httpapi/router.go's
+ * AllowOriginFunc), so this is a direct browser call, not a server-side relay.
+ */
+export async function loginWithPassword(params: PasswordLoginParams): Promise<PasswordLoginResult> {
+    const response = await fetch(`${SSO_BASE_URL}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            email: params.email,
+            password: params.password,
+            tenant_slug: params.tenantSlug,
+            client_id: SSO_CLIENT_ID,
+            totp_code: params.totpCode || undefined,
+        }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data.message || data.error_description || data.error || 'Invalid email or password');
+    }
+    if (data.mfa_required) {
+        return { mfaRequired: true, mfaMethod: data.mfa_method ?? 'totp', userId: data.user_id ?? '' };
+    }
+    if (!data.access_token) {
+        throw new Error('Sign-in did not return a session — please try again');
+    }
+    return {
+        mfaRequired: false,
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        expiresIn: data.expires_in ?? 3600,
+    };
+}
+
 export async function refreshTokens(refreshToken: string): Promise<{
     access_token: string;
     refresh_token?: string;

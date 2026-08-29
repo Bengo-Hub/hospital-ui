@@ -1,0 +1,100 @@
+<svg viewBox="0 0 640 640" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Clinician reviewing a patient chart on a tablet">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="640" y2="640" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3F1A3F"/>
+      <stop offset="1" stop-color="#6D2C6D"/>
+    </linearGradient>
+    <linearGradient id="coatGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F3EAF2"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="640" height="640" fill="url(#bgGrad)"/>
+
+  <!-- soft background blobs -->
+  <circle cx="90" cy="110" r="120" fill="#FAF6EE" opacity="0.06"/>
+  <circle cx="560" cy="520" r="160" fill="#FAF6EE" opacity="0.06"/>
+  <circle cx="540" cy="90" r="60" fill="#FAF6EE" opacity="0.08"/>
+
+  <!-- floor shadow -->
+  <ellipse cx="320" cy="560" rx="200" ry="24" fill="#000000" opacity="0.15"/>
+
+  <!-- ===== clipboard / tablet with vitals ===== -->
+  <g transform="translate(378 250)">
+    <rect x="0" y="0" width="150" height="200" rx="16" fill="#FAF6EE"/>
+    <rect x="14" y="0" width="122" height="14" rx="7" fill="#EFE1EC"/>
+    <rect x="46" y="-10" width="58" height="20" rx="8" fill="#EFE1EC"/>
+
+    <!-- heartbeat line card -->
+    <rect x="16" y="26" width="118" height="56" rx="10" fill="#6D2C6D"/>
+    <path d="M26 56 L48 56 L56 40 L66 72 L76 48 L84 56 L108 56" stroke="#FAF6EE" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+    <!-- text lines -->
+    <rect x="16" y="94" width="118" height="10" rx="5" fill="#EFE1EC"/>
+    <rect x="16" y="112" width="86" height="10" rx="5" fill="#EFE1EC"/>
+    <rect x="16" y="130" width="100" height="10" rx="5" fill="#EFE1EC"/>
+
+    <!-- medical cross badge -->
+    <circle cx="107" cy="168" r="26" fill="#6D2C6D"/>
+    <path d="M107 156v24M95 168h24" stroke="#FAF6EE" stroke-width="6" stroke-linecap="round"/>
+    <rect x="16" y="154" width="60" height="10" rx="5" fill="#EFE1EC"/>
+    <rect x="16" y="172" width="44" height="10" rx="5" fill="#EFE1EC"/>
+  </g>
+
+  <!-- ===== clinician figure ===== -->
+  <g transform="translate(150 190)">
+    <!-- legs -->
+    <rect x="34" y="300" width="30" height="90" rx="14" fill="#3F1A3F"/>
+    <rect x="86" y="300" width="30" height="90" rx="14" fill="#3F1A3F"/>
+    <rect x="24" y="382" width="50" height="16" rx="8" fill="#2C2530"/>
+    <rect x="76" y="382" width="50" height="16" rx="8" fill="#2C2530"/>
+
+    <!-- coat body -->
+    <path d="M40 130 C40 110 60 96 78 96 C96 96 116 110 116 130 L128 300 C128 312 118 320 106 320 L50 320 C38 320 28 312 28 300 Z" fill="url(#coatGrad)"/>
+    <!-- coat lapel split -->
+    <path d="M78 118 L64 320" stroke="#EFE1EC" stroke-width="3"/>
+    <path d="M78 118 L92 320" stroke="#EFE1EC" stroke-width="3"/>
+    <!-- coat buttons -->
+    <circle cx="78" cy="180" r="4" fill="#6D2C6D"/>
+    <circle cx="78" cy="210" r="4" fill="#6D2C6D"/>
+    <circle cx="78" cy="240" r="4" fill="#6D2C6D"/>
+
+    <!-- arm holding tablet (front arm) -->
+    <path d="M112 150 C150 158 178 176 196 200" stroke="url(#coatGrad)" stroke-width="26" stroke-linecap="round"/>
+    <circle cx="200" cy="204" r="15" fill="#3B2A3B"/>
+
+    <!-- back arm -->
+    <path d="M42 150 C20 168 10 190 14 216" stroke="url(#coatGrad)" stroke-width="24" stroke-linecap="round"/>
+    <circle cx="15" cy="220" r="14" fill="#3B2A3B"/>
+
+    <!-- neck -->
+    <rect x="66" y="80" width="24" height="26" rx="10" fill="#3B2A3B"/>
+    <!-- head -->
+    <circle cx="78" cy="62" r="38" fill="#4A3548"/>
+    <!-- hair -->
+    <path d="M40 56 C40 26 60 12 78 12 C98 12 116 28 116 56 C116 40 102 30 78 30 C56 30 40 40 40 56 Z" fill="#2C2530"/>
+    <!-- simple face -->
+    <circle cx="66" cy="64" r="4" fill="#FAF6EE"/>
+    <circle cx="90" cy="64" r="4" fill="#FAF6EE"/>
+    <path d="M64 80 Q78 90 92 80" stroke="#FAF6EE" stroke-width="3" stroke-linecap="round" fill="none"/>
+
+    <!-- stethoscope -->
+    <path d="M58 108 C54 130 54 148 70 158" stroke="#6D2C6D" stroke-width="6" stroke-linecap="round" fill="none"/>
+    <path d="M96 108 C100 130 100 148 84 158" stroke="#6D2C6D" stroke-width="6" stroke-linecap="round" fill="none"/>
+    <circle cx="70" cy="160" r="7" fill="#3F1A3F"/>
+    <circle cx="84" cy="160" r="7" fill="#3F1A3F"/>
+    <path d="M77 158 v20" stroke="#6D2C6D" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="77" cy="184" r="10" fill="#3F1A3F"/>
+  </g>
+
+  <!-- floating plus badges -->
+  <g opacity="0.85">
+    <circle cx="500" cy="150" r="22" fill="#FAF6EE" opacity="0.9"/>
+    <path d="M500 140v20M490 150h20" stroke="#6D2C6D" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <g opacity="0.7">
+    <circle cx="120" cy="480" r="16" fill="#FAF6EE" opacity="0.8"/>
+    <path d="M120 473v14M113 480h14" stroke="#6D2C6D" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>

@@ -2,14 +2,11 @@ import { PoweredByBadge } from '@bengo-hub/shared-ui-lib';
 import { Mail, Phone } from 'lucide-react';
 import Link from 'next/link';
 
-const DEMO_SLUG = process.env.NEXT_PUBLIC_TENANT_SLUG || 'codevertex-demo';
-const DEMO_LOGIN_HREF = `/${DEMO_SLUG}/login`;
-
 const PRODUCT_LINKS = [
-  { label: 'Features', href: '#features' },
-  { label: 'Trust & compliance', href: '#trust' },
-  { label: 'Pricing', href: '#pricing' },
-  { label: 'Try the demo', href: DEMO_LOGIN_HREF },
+  { label: 'Features', href: '/about#features' },
+  { label: 'Trust & compliance', href: '/about#trust' },
+  { label: 'Pricing', href: '/about#pricing' },
+  { label: 'Try the demo', href: '/' },
 ];
 
 export function LandingFooter() {

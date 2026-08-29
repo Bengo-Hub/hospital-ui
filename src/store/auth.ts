@@ -1,5 +1,12 @@
 import { apiClient } from '@/lib/api/client';
-import { buildAuthorizeUrl, exchangeCodeForTokens, fetchHospitalProfile, revokeServerSession } from '@/lib/auth/api';
+import {
+    buildAuthorizeUrl,
+    exchangeCodeForTokens,
+    fetchHospitalProfile,
+    loginWithPassword as loginWithPasswordRequest,
+    revokeServerSession,
+    type PasswordLoginResult,
+} from '@/lib/auth/api';
 import {
     consumeVerifier,
     generateCodeChallenge,
@@ -43,6 +50,9 @@ interface AuthState {
     initialize: () => Promise<void>;
     redirectToSSO: (orgSlug: string, returnTo?: string) => Promise<void>;
     handleSSOCallback: (orgSlug: string, code: string, callbackUrl: string) => Promise<void>;
+    /** Email+password login (see lib/auth/api.ts's loginWithPassword). Returns an MFA challenge
+     *  the caller should re-submit with totpCode filled in, or resolves once fully authenticated. */
+    loginWithPassword: (orgSlug: string, email: string, password: string, totpCode?: string) => Promise<PasswordLoginResult>;
     logout: () => Promise<void>;
 }
 
@@ -157,6 +167,44 @@ export const useAuthStore = create<AuthState>()(
                 } catch {
                     set({ status: 'error', error: 'Sign-in failed' });
                 }
+            },
+
+            loginWithPassword: async (orgSlug: string, email: string, password: string, totpCode?: string) => {
+                set({ status: 'loading', error: null });
+                let result: PasswordLoginResult;
+                try {
+                    result = await loginWithPasswordRequest({ email, password, tenantSlug: orgSlug, totpCode });
+                } catch (error) {
+                    set({ status: 'idle', error: error instanceof Error ? error.message : 'Sign-in failed' });
+                    throw error;
+                }
+                if (result.mfaRequired) {
+                    // Not yet authenticated — the caller (login form) re-prompts for a TOTP code
+                    // and calls loginWithPassword again with it. Reset to idle, not error: this
+                    // is an expected intermediate step, not a failure.
+                    set({ status: 'idle' });
+                    return result;
+                }
+
+                const session: Session = {
+                    accessToken: result.accessToken,
+                    refreshToken: result.refreshToken || '',
+                    expiresAt: new Date(Date.now() + result.expiresIn * 1000).toISOString(),
+                };
+                apiClient.setAccessToken(session.accessToken);
+                set({ session });
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem('tenantSlug', orgSlug);
+                }
+                try {
+                    const user = await fetchHospitalProfile(orgSlug, session.accessToken);
+                    apiClient.setTenantInfo(user.tenant_id, user.tenant_slug);
+                    set({ user, status: 'authenticated', lastAuthenticatedAt: Date.now() });
+                } catch (error) {
+                    set({ status: 'error', error: 'Signed in, but could not load your profile' });
+                    throw error;
+                }
+                return result;
             },
 
             logout: async () => {

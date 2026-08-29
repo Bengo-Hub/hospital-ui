@@ -6,13 +6,10 @@ import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
-const DEMO_SLUG = process.env.NEXT_PUBLIC_TENANT_SLUG || 'codevertex-demo';
-const DEMO_LOGIN_HREF = `/${DEMO_SLUG}/login`;
-
 const NAV_LINKS = [
-  { label: 'Features', href: '#features' },
-  { label: 'Trust & compliance', href: '#trust' },
-  { label: 'Pricing', href: '#pricing' },
+  { label: 'Features', href: '/about#features' },
+  { label: 'Trust & compliance', href: '/about#trust' },
+  { label: 'Pricing', href: '/about#pricing' },
 ];
 
 export function LandingNav() {
@@ -21,7 +18,7 @@ export function LandingNav() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-18 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5 shrink-0" aria-label="Codevertex Afya home">
+        <Link href="/about" className="flex items-center gap-2.5 shrink-0" aria-label="Codevertex Afya — learn more">
           <span className="h-9 w-9 rounded-xl bg-brand-primary text-brand-contrast flex items-center justify-center font-black text-sm shadow-sm">
             CA
           </span>
@@ -43,10 +40,10 @@ export function LandingNav() {
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
-          <Link href={DEMO_LOGIN_HREF}>
+          <Link href="/">
             <Button variant="ghost" size="sm">Sign In</Button>
           </Link>
-          <Link href={DEMO_LOGIN_HREF}>
+          <Link href="/">
             <Button variant="primary" size="sm" className="bg-brand-primary text-brand-contrast hover:bg-brand-emphasis">
               Try the Demo
             </Button>
@@ -82,10 +79,10 @@ export function LandingNav() {
             </a>
           ))}
           <div className="flex flex-col gap-2 mt-2 pt-3 border-t border-border/70">
-            <Link href={DEMO_LOGIN_HREF} onClick={() => setOpen(false)}>
+            <Link href="/" onClick={() => setOpen(false)}>
               <Button variant="outline" className="w-full">Sign In</Button>
             </Link>
-            <Link href={DEMO_LOGIN_HREF} onClick={() => setOpen(false)}>
+            <Link href="/" onClick={() => setOpen(false)}>
               <Button variant="primary" className="w-full bg-brand-primary text-brand-contrast hover:bg-brand-emphasis">
                 Try the Demo
               </Button>
