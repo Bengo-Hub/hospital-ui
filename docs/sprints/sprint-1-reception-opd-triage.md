@@ -1,6 +1,9 @@
 # Hospital UI — Sprint 1: Reception / OPD Queue / Patient Registry / Triage
 
-**Status:** ⏳ Planned
+**Status:** ✅ Shipped 2026-08-29 (`hospital-ui@bfe7576`) — `/patients` (search/register + visit
+check-in) and `/triage` (vitals capture) pages, `visit-status-badge.tsx`. Uses the real
+shared-ui-lib `SearchableCombobox` (bumped to v0.1.82 same day for the fixed-position dropdown —
+see Sprint 2). OPD queue lives at `/consultation/queue` (Sprint 2 scope, not a separate page here).
 **Depends on:** `hospital-api` Sprint 1
 **Goal:** Patient registration form, OPD queue (worklist table), triage vitals-entry form.
 

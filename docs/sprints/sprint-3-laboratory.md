@@ -1,6 +1,8 @@
 # Hospital UI — Sprint 3: Laboratory
 
-**Status:** ⏳ Planned
+**Status:** ✅ Shipped 2026-08-29 (`hospital-ui@e6a4216`) — `/laboratory` (worklist + result
+entry, per-line `Promise.all` result submission since the backend endpoint is per-line not
+batched). Test catalogue browsing lives inside the order-creation flow, not a separate page.
 **Depends on:** `hospital-api` Sprint 3
 **Goal:** Lab worklist and result-entry UI.
 

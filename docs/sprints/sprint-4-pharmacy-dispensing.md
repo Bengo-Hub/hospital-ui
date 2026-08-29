@@ -1,6 +1,11 @@
 # Hospital UI — Sprint 4: Pharmacy & Dispensing Terminal
 
-**Status:** ⏳ Planned
+**Status:** ✅ Shipped 2026-08-29 (`hospital-ui@e6a4216`) — `/pharmacy` (prescription list),
+`/pharmacy/[id]` (detail: approve/lock/reject/cancel/dispense, per-line controlled-substance
+witness capture with client-side validation mirroring the backend's dual-witness rejection),
+`/pharmacy/controlled-substances` (permission-gated audit log). Standalone-chemist mode is handled
+on the billing side (`/visits/[visitId]/account`'s `ChemistCheckout` branch, Sprint 5), not a
+separate pharmacy-page variant.
 **Depends on:** `hospital-api` Sprint 4
 **Goal:** Prescription review/dispense terminal, including the standalone-chemist mode UI.
 

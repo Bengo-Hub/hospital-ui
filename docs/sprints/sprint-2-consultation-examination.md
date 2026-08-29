@@ -1,6 +1,8 @@
 # Hospital UI — Sprint 2: Consultation & Examination
 
-**Status:** ⏳ Planned
+**Status:** ✅ Shipped 2026-08-29 (`hospital-ui@bfe7576`) — `/consultation/queue` (doctor's
+examination queue, diagnosis picker via the real `SearchableCombobox`). Deviated from an earlier
+`/consultation` path to match this doc's own reserved route.
 **Depends on:** `hospital-api` Sprint 2
 **Goal:** Doctor consultation queue + examination/diagnosis form.
 

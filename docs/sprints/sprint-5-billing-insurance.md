@@ -1,14 +1,14 @@
 # Hospital UI — Sprint 5: Billing & Patient Accounts (Insurance)
 
-**Status:** ⏳ Planned — no hospital-ui code has been touched. **Update (2026-08-29):** the backend
-this sprint builds against is no longer just a design spec — `hospital-api`'s Sprint 5 core
-(`hospital-api@126adbf`) shipped real endpoints (`GET /patients/{id}/account`, `GET /billing/queue`,
-`POST /billing/charges/{id}/collect`, `POST /billing/accounts/{id}/settle`,
-`POST /billing/accounts/{id}/override-settlement`) plus `collect_own`/`collect_any`/
-`override_settlement` RBAC permissions and the `RoleCashier` role. The insurance
-eligibility/claim-submit endpoints described below are **not yet built** on the backend either
-(client + treasury-api S2S routes exist, no hospital-api handler calls them yet) — the pages/
-components below remain accurate as the target design, this is a status update, not a rewrite.
+**Status:** ✅ Core ledger UI shipped 2026-08-29 (`hospital-ui@e6a4216`) — `/billing/queue`
+(cashier desk, department filter, `collect_any`-gated Collect) and `/visits/[visitId]/account`
+(facility-type-branched: chemist tier gets a flat `ChemistCheckout`, clinic+ get the full
+`PatientAccountLedger` with StatCards + per-charge Collect Now; Settle/Override-Settlement gated to
+facility+hospital tiers). The account page currently has no inbound link from a patients/visits
+list (direct-URL only) — flagged as a forward-looking gap in the migration plan, not fixed here.
+**Insurance eligibility/claim-submit UI is still not built** — the backend endpoints themselves are
+being wired now (Phase 5 remainder, see the migration plan) but no hospital-ui page calls them yet;
+the design below remains the target once that backend work lands.
 **Depends on:** `hospital-api` Sprint 5
 **Goal:** A distributed billing ledger UI — every department's own "collect payment for what I
 charged" surface, a Billing-desk fallback queue, a patient account/ledger view any department can
