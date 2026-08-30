@@ -1,8 +1,8 @@
 # Hospital UI (Codevertex Afya) — Plan
 
 **Service:** hospital-ui
-**Last updated:** 2026-08-29
-**Status:** Sprint-0 scaffold (Next.js app shell + placeholder dashboard, no domain pages yet — mirrors the `hospital-api` backend's own "empty but buildable" Sprint-0 philosophy).
+**Last updated:** 2026-08-30
+**Status:** Sprints 0-5 shipped, live in production, matching hospital-api's own parity. Real domain pages exist for reception/triage, consultation, laboratory, pharmacy/dispensing, and billing/insurance, plus a Staff & Roles / Config admin surface — all gated by a real RBAC system (`Can`, `useAppPermissions`, permission-filtered sidebar). See `docs/sprints/` for what shipped in each sprint.
 
 ---
 

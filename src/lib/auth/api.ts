@@ -21,10 +21,9 @@ export interface HospitalProfile {
 /**
  * Fetch the current user's hospital-service profile: GET /api/v1/{tenantSlug}/hospital/auth/me.
  *
- * hospital-api has not shipped this endpoint yet (Sprint-0 — only /ping is mounted under
- * /api/v1/{tenant}/hospital). Rather than crash the login flow on a 404, fall back to the SSO
- * identity (auth-api's own /auth/me) so the app still authenticates with a usable profile. Once
- * hospital-api ships local RBAC sync, this simply stops taking the fallback branch.
+ * This endpoint has been live since hospital-api's Sprint 1. The auth-api /auth/me fallback below
+ * is a defensive path only (e.g. a transient hospital-api outage), not evidence the endpoint is
+ * missing.
  */
 export async function fetchHospitalProfile(tenantSlug: string, accessToken?: string): Promise<HospitalProfile> {
     try {

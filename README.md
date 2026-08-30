@@ -3,16 +3,19 @@
 Frontend scaffold for `hospital-api` — the Codevertex Afya hospital/clinic management system.
 Next.js 16 (App Router) + React 19, multi-tenant via `[orgSlug]`, SSO/PKCE auth.
 
-**Status:** Sprint-0 scaffold. Auth, tenant branding, and the app shell (sidebar/header) are wired
-up; there are no domain pages yet — `hospital-api` has no business endpoints beyond `/ping` at
-this stage. The dashboard shows placeholder stat cards only, with zero data wiring.
+**Status:** Sprints 0-5 shipped and live in production (Codevertex Afya), matching hospital-api's
+own parity. Real pages exist for reception/triage, consultation, laboratory, pharmacy/dispensing
+(incl. controlled-substance witness flow), billing/insurance, and a Staff & Roles / Config admin
+surface — all RBAC-gated (`Can`, `useAppPermissions`, a permission-filtered sidebar). See
+`docs/plan.md` for the current, authoritative status and `docs/sprints/` for what shipped in each
+sprint — this file is a static entry point, not the source of truth.
 
 ## Stack
 
 - Next.js 16.2.3, React 19.2.4, TypeScript 5 (strict), Tailwind CSS 4.
 - Zustand 5 (auth store), TanStack Query 5 (server state), Axios (`apiClient`).
-- SSO/PKCE against auth-api; `@bengo-hub/shared-ui-lib` pinned to `v0.1.47` — the same tag used by
-  `library-ui`/`pos-ui` — for cross-frontend compatibility.
+- SSO/PKCE against auth-api; `@bengo-hub/shared-ui-lib` (see `package.json` for the currently
+  pinned tag — kept current with the fleet's other App Store frontends).
 - `next-themes` (light-first default, manual toggle), `sonner` (toasts), `lucide-react` (icons).
 
 No PWA / service-worker (unlike `library-ui`/`pos-ui`) — out of scope for this scaffold.
@@ -55,27 +58,32 @@ Copy `.env.example` to `.env.local` and adjust as needed:
 
 PKCE against auth-api, mirroring the pattern used by `library-ui`/`pos-ui`:
 
-1. `/{orgSlug}/login` — a plain "Sign in with SSO" button. No PIN backend exists yet on
-   hospital-api, so this scaffold skips the PIN/kiosk login pattern used by the retail/library
-   frontends and goes straight to SSO.
-2. `/{orgSlug}/auth/callback` — exchanges the authorization code for tokens, then calls
-   `GET /api/v1/{tenant}/hospital/auth/me` to sync local RBAC. That endpoint doesn't exist on
-   hospital-api yet (Sprint-0) — a 404 there falls back gracefully to auth-api's own `/auth/me`
-   so the app still authenticates instead of crashing. See `src/lib/auth/api.ts`.
-3. `/{orgSlug}/dashboard` — the authenticated app shell (sidebar + header) with placeholder stat
-   cards (Patients Today, Beds Occupied, Pending Lab Results, Today's Revenue). No data wiring —
-   hospital-api has no domain endpoints yet.
+1. `/{orgSlug}/login` — a plain "Sign in with SSO" button. No PIN/kiosk login pattern (used by the
+   retail/library frontends) exists for hospital-ui; it goes straight to SSO.
+2. `/{orgSlug}/auth/callback` — exchanges the authorization code for tokens, then calls the real
+   `GET /api/v1/{tenant}/hospital/auth/me` (live since hospital-api's Sprint 1) to sync local RBAC
+   roles/permissions. A 404 there still falls back gracefully to auth-api's own `/auth/me` as a
+   defensive fallback, not because the endpoint is missing. See `src/lib/auth/api.ts`.
+3. `/{orgSlug}/dashboard` — the authenticated app shell (sidebar + header) with real, data-wired
+   stat cards and RBAC-gated navigation into reception/triage, consultation, lab, pharmacy,
+   billing, and the Staff & Roles / Config admin pages.
 
 ## Project layout
 
 ```
-src/app/[orgSlug]/…      login, auth/callback, unauthorized, dashboard
+src/app/[orgSlug]/…      login, auth/callback, unauthorized, dashboard,
+                         reception/triage, consultation, lab, pharmacy, billing,
+                         users (Staff & Roles), config
 src/lib/api/client.ts    shared apiClient (axios + tenant headers + 401/403/402/5xx handling)
 src/lib/api/tenant.ts    tenant branding lookup (auth-api)
 src/lib/auth/*           PKCE helpers, SSO token exchange, token refresh
+src/lib/rbac/permissions.ts   permission-code constants + role→permission fallback map
+src/hooks/use-app-permissions.ts   permission resolver (server-first, client-fallback)
 src/store/auth.ts        Zustand auth store (persisted session)
 src/providers/           AuthProvider, BrandingProvider
-src/components/          sidebar, header, theme toggle, ui/* (Card, Button, Badge, ConfirmDialog…)
+src/components/auth/can.tsx   <Can> permission-gating primitive
+src/components/          sidebar (RBAC + facility-tier gated), header, theme toggle,
+                         ui/* (Card, Button, Badge, ConfirmDialog…)
 ```
 
 ## Deploy

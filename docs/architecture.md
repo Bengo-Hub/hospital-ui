@@ -1,6 +1,7 @@
 # Hospital UI — Architecture
 
-**Last updated:** 2026-07-31
+**Last updated:** 2026-08-30 (status line only — layer/data-flow/branding sections below were
+already accurate and remain unchanged). See `docs/plan.md` for current build status.
 
 ## Layer Overview
 
