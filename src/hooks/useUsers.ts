@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
-import { usersApi, configApi, outletsApi, type InviteMemberInput } from '@/lib/api/users';
+import { usersApi, configApi, outletsApi, userOutletsApi, type InviteMemberInput, type HospitalConfigSettings } from '@/lib/api/users';
 
 function useOrgSlug(): string {
   const params = useParams();
@@ -137,6 +137,44 @@ export function useCreateRole() {
   });
 }
 
+export function useDeleteRole() {
+  const orgSlug = useOrgSlug();
+  const invalidateRoles = useInvalidateRoles();
+  return useMutation({
+    mutationFn: (roleId: string) => usersApi.deleteRole(orgSlug, roleId),
+    onSuccess: invalidateRoles,
+  });
+}
+
+export function useUserOutlets(userId: string) {
+  const orgSlug = useOrgSlug();
+  return useQuery({
+    queryKey: ['hospital', 'user-outlets', orgSlug, userId],
+    queryFn: () => userOutletsApi.list(orgSlug, userId),
+    enabled: !!orgSlug && !!userId,
+  });
+}
+
+export function useAssignUserOutlet() {
+  const orgSlug = useOrgSlug();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, outletId, isHomeOutlet }: { userId: string; outletId: string; isHomeOutlet: boolean }) =>
+      userOutletsApi.assign(orgSlug, userId, outletId, isHomeOutlet),
+    onSuccess: (_data, vars) => queryClient.invalidateQueries({ queryKey: ['hospital', 'user-outlets', orgSlug, vars.userId] }),
+  });
+}
+
+export function useRemoveUserOutlet() {
+  const orgSlug = useOrgSlug();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, outletId }: { userId: string; outletId: string }) =>
+      userOutletsApi.remove(orgSlug, userId, outletId),
+    onSuccess: (_data, vars) => queryClient.invalidateQueries({ queryKey: ['hospital', 'user-outlets', orgSlug, vars.userId] }),
+  });
+}
+
 export function useHospitalConfig() {
   const orgSlug = useOrgSlug();
   return useQuery({
@@ -144,6 +182,15 @@ export function useHospitalConfig() {
     queryFn: () => configApi.get(orgSlug),
     enabled: !!orgSlug,
     staleTime: 5 * 60_000,
+  });
+}
+
+export function useUpdateConfig() {
+  const orgSlug = useOrgSlug();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (updates: HospitalConfigSettings) => configApi.update(orgSlug, updates),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['hospital', 'config', orgSlug] }),
   });
 }
 

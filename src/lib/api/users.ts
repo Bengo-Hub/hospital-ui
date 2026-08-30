@@ -85,7 +85,41 @@ export const usersApi = {
 
   updateRolePermissions: (orgSlug: string, roleId: string, permissionCodes: string[]) =>
     apiClient.put(`${hospitalBase(orgSlug)}/roles/${roleId}/permissions`, { permission_codes: permissionCodes }),
+
+  deleteRole: (orgSlug: string, roleId: string) =>
+    apiClient.delete(`${hospitalBase(orgSlug)}/roles/${roleId}`),
 };
+
+export interface UserOutletAssignment {
+  id: string;
+  outlet_id: string;
+  is_home_outlet: boolean;
+  assigned_at: string;
+}
+
+export const userOutletsApi = {
+  list: (orgSlug: string, userId: string) =>
+    apiClient.get<{ data: UserOutletAssignment[] }>(`${hospitalBase(orgSlug)}/users/${userId}/outlets`).then(unwrapList),
+
+  assign: (orgSlug: string, userId: string, outletId: string, isHomeOutlet: boolean) =>
+    apiClient.post(`${hospitalBase(orgSlug)}/users/${userId}/outlets`, { outlet_id: outletId, is_home_outlet: isHomeOutlet }),
+
+  remove: (orgSlug: string, userId: string, outletId: string) =>
+    apiClient.delete(`${hospitalBase(orgSlug)}/users/${userId}/outlets/${outletId}`),
+};
+
+export interface OperatingHoursDay {
+  open: string;
+  close: string;
+  closed?: boolean;
+}
+export type OperatingHours = Partial<Record<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun', OperatingHoursDay>>;
+
+export interface HospitalConfigSettings {
+  auto_logout_minutes?: number;
+  default_landing_view?: string;
+  operating_hours?: OperatingHours;
+}
 
 export interface HospitalConfig {
   tenant_name: string;
@@ -94,10 +128,13 @@ export interface HospitalConfig {
   facility_type: string;
   enabled_modules: string[];
   synced_at: string | null;
+  settings: HospitalConfigSettings;
 }
 
 export const configApi = {
   get: (orgSlug: string) => apiClient.get<HospitalConfig>(`${hospitalBase(orgSlug)}/config`),
+  update: (orgSlug: string, updates: HospitalConfigSettings) =>
+    apiClient.put<{ settings: HospitalConfigSettings }>(`${hospitalBase(orgSlug)}/config`, updates),
 };
 
 export interface HospitalOutlet {

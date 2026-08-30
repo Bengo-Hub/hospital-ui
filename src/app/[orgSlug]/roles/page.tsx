@@ -1,14 +1,15 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, Lock, Plus, Save, Search, Shield, Sparkles } from 'lucide-react';
+import { Loader2, Lock, Plus, Save, Search, Shield, Sparkles, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge, Button, Card, CardContent, CardHeader } from '@/components/ui/base';
 import { PageHeader } from '@/components/ui/page';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Can } from '@/components/auth/can';
 import { useAppPermissions } from '@/hooks/use-app-permissions';
 import {
-  useHospitalRoles, useHospitalPermissions, useRolePermissions, useUpdateRolePermissions, useCreateRole,
+  useHospitalRoles, useHospitalPermissions, useRolePermissions, useUpdateRolePermissions, useCreateRole, useDeleteRole,
 } from '@/hooks/useUsers';
 import { apiErrorMessage } from '@/lib/api/error-message';
 import { P } from '@/lib/rbac/permissions';
@@ -22,12 +23,26 @@ export default function RolesPage() {
   const { data: roles = [], isLoading: rolesLoading } = useHospitalRoles();
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<HospitalRoleOption | null>(null);
+  const deleteRole = useDeleteRole();
 
   useEffect(() => {
     if (!selectedCode && roles.length) setSelectedCode(roles[0].code);
   }, [roles, selectedCode]);
 
   const selectedRole = roles.find((r) => r.code === selectedCode) ?? null;
+
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    try {
+      await deleteRole.mutateAsync(confirmDelete.id);
+      toast.success('Role deleted.');
+      if (selectedCode === confirmDelete.code) setSelectedCode(null);
+      setConfirmDelete(null);
+    } catch (e) {
+      toast.error(await apiErrorMessage(e, 'Failed to delete role'));
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -57,10 +72,13 @@ export default function RolesPage() {
               <div className="flex justify-center py-6"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div>
             ) : (
               roles.map((r) => (
-                <button
+                <div
                   key={r.code}
+                  className={`w-full flex items-center gap-1 p-2 rounded-lg text-sm ${selectedCode === r.code ? 'bg-primary/10' : 'hover:bg-accent/10'}`}
+                >
+                <button
                   onClick={() => setSelectedCode(r.code)}
-                  className={`w-full flex items-center justify-between gap-2 p-2 rounded-lg text-sm text-left ${selectedCode === r.code ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-accent/10'}`}
+                  className={`flex-1 flex items-center justify-between gap-2 text-left min-w-0 ${selectedCode === r.code ? 'text-primary font-semibold' : ''}`}
                 >
                   <span className="truncate">{r.name}</span>
                   {r.is_system_role ? (
@@ -69,6 +87,17 @@ export default function RolesPage() {
                     <span className="text-[10px] text-primary/70 flex items-center gap-0.5 shrink-0"><Sparkles className="h-2.5 w-2.5" /> {r.cloned_from_role_id ? 'customized' : 'custom'}</span>
                   )}
                 </button>
+                {!r.is_system_role && canManage && (
+                  <button
+                    onClick={() => setConfirmDelete(r)}
+                    className="text-muted-foreground hover:text-destructive shrink-0 p-1"
+                    title="Delete role"
+                    aria-label={`Delete ${r.name}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                </div>
               ))
             )}
             {!rolesLoading && roles.length === 0 && <p className="text-xs text-muted-foreground p-2">No roles found.</p>}
@@ -77,6 +106,16 @@ export default function RolesPage() {
 
         {selectedRole && <PermissionMatrix key={selectedRole.id} role={selectedRole} canManage={canManage} onCustomized={setSelectedCode} />}
       </div>
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title={`Delete role "${confirmDelete?.name ?? ''}"?`}
+        description="This cannot be undone. If any staff member still holds this role, the deletion will be rejected until they're reassigned."
+        variant="danger"
+        confirmLabel="Delete role"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }

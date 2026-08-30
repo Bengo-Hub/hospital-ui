@@ -8,8 +8,9 @@ import { PageHeader } from '@/components/ui/page';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Can } from '@/components/auth/can';
 import { useAppPermissions } from '@/hooks/use-app-permissions';
-import { useHospitalUsers, useHospitalRoles, useSetUserRole, useSetUserStatus } from '@/hooks/useUsers';
+import { useHospitalUsers, useHospitalRoles, useHospitalOutlets, useSetUserRole, useSetUserStatus } from '@/hooks/useUsers';
 import { ExtraRolesCell } from '@/components/users/extra-roles-cell';
+import { OutletAssignmentCell } from '@/components/users/outlet-assignment-cell';
 import { InviteMemberModal } from '@/components/users/invite-member-modal';
 import { apiErrorMessage } from '@/lib/api/error-message';
 import { P } from '@/lib/rbac/permissions';
@@ -97,13 +98,26 @@ function StatusCell({ user, canManage }: { user: HospitalUserRow; canManage: boo
   );
 }
 
+const STATUS_FILTER_OPTIONS = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'suspended', label: 'Suspended' },
+];
+
 export default function UsersPage() {
   const { data: users, isLoading } = useHospitalUsers();
+  const { data: roleOptions = [] } = useHospitalRoles();
+  const { data: outletOptions = [] } = useHospitalOutlets();
   const { can } = useAppPermissions();
   const canManage = can(P.USERS_MANAGE);
   const [inviting, setInviting] = useState(false);
 
   const rows = useMemo(() => users ?? [], [users]);
+
+  const roleFilterOptions = useMemo(
+    () => [{ value: '', label: 'No role' }, ...roleOptions.map((r) => ({ value: r.code, label: r.name }))],
+    [roleOptions],
+  );
 
   const columns: DataTableColumn<HospitalUserRow>[] = [
     {
@@ -116,11 +130,14 @@ export default function UsersPage() {
       render: (u) => <span className="text-muted-foreground">{u.email}</span>,
     },
     {
-      key: 'status', header: 'Status', sortable: true, mobileAction: true,
+      key: 'status', header: 'Status', sortable: true, filterable: true, mobileAction: true,
+      filterOptions: STATUS_FILTER_OPTIONS,
       render: (u) => <StatusCell user={u} canManage={canManage} />,
     },
     {
-      key: 'role', header: 'Role', accessor: (u) => u.roles?.[0] ?? '',
+      key: 'role', header: 'Role', sortable: true, filterable: true,
+      accessor: (u) => u.roles?.[0] ?? '',
+      filterOptions: roleFilterOptions,
       render: (u) => (
         <Can permission={P.USERS_MANAGE} fallback={<span className="text-xs font-medium text-muted-foreground">{(u.roles ?? [])[0] ?? 'No role'}</span>}>
           <RoleCell userId={u.id} currentRole={(u.roles ?? [])[0] ?? ''} />
@@ -131,6 +148,12 @@ export default function UsersPage() {
       key: 'extra_roles', header: 'Extra roles',
       render: (u) => <ExtraRolesCell userId={u.id} primaryRole={(u.roles ?? [])[0] ?? ''} extraRoles={(u.roles ?? []).slice(1)} canManage={canManage} />,
     },
+    ...(outletOptions.length > 1
+      ? [{
+          key: 'outlets', header: 'Outlets',
+          render: (u: HospitalUserRow) => <OutletAssignmentCell userId={u.id} canManage={canManage} />,
+        } satisfies DataTableColumn<HospitalUserRow>]
+      : []),
   ];
 
   return (
