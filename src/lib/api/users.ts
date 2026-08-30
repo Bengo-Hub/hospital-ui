@@ -45,3 +45,18 @@ export interface HospitalConfig {
 export const configApi = {
   get: (orgSlug: string) => apiClient.get<HospitalConfig>(`${hospitalBase(orgSlug)}/config`),
 };
+
+export interface HospitalOutlet {
+  id: string;
+  code: string;
+  name: string;
+  is_hq: boolean;
+  status: string;
+}
+
+/** No permission gate (mirrors /auth/me and /ping) — the outlet switcher needs this list
+ *  before any module-specific permission is known, and there's nothing sensitive in it. */
+export const outletsApi = {
+  list: (orgSlug: string) =>
+    apiClient.get<{ data: HospitalOutlet[] }>(`${hospitalBase(orgSlug)}/outlets`).then(unwrapList),
+};

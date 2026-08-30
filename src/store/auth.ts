@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api/client';
+import { useOutletStore } from '@/store/outlet';
 import {
     buildAuthorizeUrl,
     exchangeCodeForTokens,
@@ -216,6 +217,7 @@ export const useAuthStore = create<AuthState>()(
                 set({ status: 'idle', user: null, session: null, subscriptionInfo: undefined, lastAuthenticatedAt: null });
                 apiClient.setAccessToken(null);
                 apiClient.setTenantInfo(null, null);
+                useOutletStore.getState().clear();
                 if (typeof window !== 'undefined') {
                     try { localStorage.removeItem('tenantSlug'); } catch { /* no-op */ }
                     try { localStorage.removeItem('hospital-auth-storage'); } catch { /* no-op */ }

@@ -8,6 +8,7 @@ import { useBranding } from '@/providers/branding-provider';
 import { useParams } from 'next/navigation';
 import { useVisibleServices, AppSwitcherGrid, AppSwitcherTrigger, type ServiceKey } from '@bengo-hub/shared-ui-lib/app-switcher';
 import { AccountPanel } from '@bengo-hub/shared-ui-lib/account-panel';
+import { OutletSwitcher } from './outlet-switcher';
 
 // Canonical service list (labels/icons/coverage, incl. 'coming-soon' entries) lives in
 // shared-ui-lib's app-switcher — see useVisibleServices below. hospital-ui ('afya' in the
@@ -70,6 +71,8 @@ export function Header({ onMenuClick }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-1 sm:gap-3">
+        {isAuthenticated && <OutletSwitcher />}
+
         <ThemeToggle />
 
         {isAuthenticated && <AppSwitcherTrigger services={services} />}

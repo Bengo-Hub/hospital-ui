@@ -11,6 +11,7 @@ class ApiClient {
     private tenantId: string | null = null;
     private tenantSlug: string | null = null;
     private platformOwner = false;
+    private outletId: string | null = null;
 
     constructor() {
         this.instance = axios.create({
@@ -41,6 +42,12 @@ class ApiClient {
             if (this.tenantSlug) {
                 config.headers['X-Tenant-Slug'] = this.tenantSlug;
             }
+        }
+        // Multi-branch tenants only — hospital-api's OutletContextMiddleware reads this header
+        // to resolve a non-default outlet; absent for the (overwhelming majority) single-outlet
+        // tenants, where the backend falls back to the tenant's HQ outlet on its own.
+        if (this.outletId) {
+            config.headers['X-Outlet-ID'] = this.outletId;
         }
         return config;
     };
@@ -132,6 +139,11 @@ class ApiClient {
 
     public setPlatformOwner(isPlatformOwner: boolean) {
         this.platformOwner = isPlatformOwner;
+    }
+
+    /** Set the outlet ID to send as X-Outlet-ID on every request (multi-branch tenants only). */
+    public setOutletID(outletId: string | null) {
+        this.outletId = outletId;
     }
 
     public get<T>(url: string, params?: any): Promise<T> {

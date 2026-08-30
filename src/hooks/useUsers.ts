@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
-import { usersApi, configApi } from '@/lib/api/users';
+import { usersApi, configApi, outletsApi } from '@/lib/api/users';
 
 function useOrgSlug(): string {
   const params = useParams();
@@ -44,6 +44,16 @@ export function useHospitalConfig() {
   return useQuery({
     queryKey: ['hospital', 'config', orgSlug],
     queryFn: () => configApi.get(orgSlug),
+    enabled: !!orgSlug,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useHospitalOutlets() {
+  const orgSlug = useOrgSlug();
+  return useQuery({
+    queryKey: ['hospital', 'outlets', orgSlug],
+    queryFn: () => outletsApi.list(orgSlug),
     enabled: !!orgSlug,
     staleTime: 5 * 60_000,
   });
