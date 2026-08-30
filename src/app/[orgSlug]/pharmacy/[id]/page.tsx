@@ -11,13 +11,17 @@ import {
   Loader2,
   Lock,
   Pill,
+  Printer,
+  RefreshCw,
   ShieldAlert,
   ShieldCheck,
+  X,
   XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { PdfPreview, useDocumentPreview } from '@bengo-hub/shared-ui-lib/documents';
 import { cn } from '@/lib/utils';
-import { Card, Button, Badge } from '@/components/ui/base';
+import { Card, Button, Badge, Input } from '@/components/ui/base';
 import { EmptyState, Skeleton } from '@/components/ui/page';
 import { Can } from '@/components/auth/can';
 import { apiErrorMessage } from '@/lib/api/error-message';
@@ -29,9 +33,11 @@ import {
   useCancelPrescription,
   useDispensePrescription,
   useSubmitPharmacyInsuranceClaim,
+  useRecheckInteractions,
 } from '@/hooks/usePharmacy';
 import { InsuranceClaimModal } from '@/components/billing/insurance-claim-modal';
-import type { DispenseLineInput, PrescriptionStatus } from '@/lib/api/pharmacy';
+import { pharmacyApi } from '@/lib/api/pharmacy';
+import type { DispenseLineInput, PrescriptionStatus, InteractionCheck } from '@/lib/api/pharmacy';
 import { WitnessConfirmForm, type ConfirmedWitness } from './witness-confirm-form';
 
 const STATUS_LABELS: Record<PrescriptionStatus, string> = {
@@ -69,6 +75,67 @@ interface DispenseDraft {
   requiresWitness: boolean;
 }
 
+function RecheckModal({ prescriptionId, onClose }: { prescriptionId: string; onClose: () => void }) {
+  const recheck = useRecheckInteractions();
+  const [allergyInput, setAllergyInput] = useState('');
+  const [result, setResult] = useState<InteractionCheck | null>(null);
+
+  const handleRun = async () => {
+    try {
+      const allergyFlags = allergyInput.split(',').map((a) => a.trim()).filter(Boolean);
+      const res = await recheck.mutateAsync({ id: prescriptionId, allergyFlags: allergyFlags.length ? allergyFlags : undefined });
+      setResult(res.check);
+      if (res.check.result === 'clear') toast.success('No interactions found');
+      else toast.warning('New findings — review before dispensing');
+    } catch (e) {
+      toast.error(await apiErrorMessage(e, 'Failed to re-check interactions'));
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-card rounded-2xl border border-border w-full max-w-md shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <h3 className="font-bold text-base">Re-check Interactions</h3>
+          <button onClick={onClose} className="h-9 w-9 rounded-xl flex items-center justify-center hover:bg-accent">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="p-6 space-y-4">
+          {result ? (
+            <div className={`rounded-xl border px-4 py-3 text-sm ${result.result === 'clear' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600' : 'border-amber-500/30 bg-amber-500/10 text-amber-600'}`}>
+              {result.result === 'clear'
+                ? 'No interactions or allergy matches found against the current lines.'
+                : `${result.result === 'allergy_match' ? 'Allergy match' : 'Interaction'} found — the prescription has been re-flagged for review if it was still pre-dispense.`}
+            </div>
+          ) : (
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                Newly-disclosed allergies (comma-separated, optional)
+              </label>
+              <Input value={allergyInput} onChange={(e) => setAllergyInput(e.target.value)} placeholder="e.g. penicillin, sulfa" />
+              <p className="text-[11px] text-muted-foreground mt-1.5">
+                Re-checks the prescription's current lines against inventory's interaction engine. Merged with any allergies already on file.
+              </p>
+            </div>
+          )}
+        </div>
+        <div className="flex gap-3 px-6 pb-6">
+          <Button variant="outline" className="flex-1" onClick={onClose} disabled={recheck.isPending}>
+            {result ? 'Close' : 'Cancel'}
+          </Button>
+          {!result && (
+            <Button className="flex-1 gap-2" onClick={handleRun} disabled={recheck.isPending}>
+              {recheck.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              Run Check
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PrescriptionDetailPage() {
   const params = useParams();
   const orgSlug = params?.orgSlug as string;
@@ -81,9 +148,14 @@ export default function PrescriptionDetailPage() {
   const cancelRx = useCancelPrescription();
   const dispense = useDispensePrescription();
   const submitInsuranceClaim = useSubmitPharmacyInsuranceClaim();
+  const { openPreview, previewProps } = useDocumentPreview({ onError: (m) => toast.error(m) });
+  const printLabel = (lineId: string, fileName: string) => {
+    openPreview(() => pharmacyApi.downloadLabel(orgSlug, id, lineId), { fileName: `${fileName}.pdf`, title: 'Dispensing Label' });
+  };
 
   const [overrideReason, setOverrideReason] = useState('');
   const [showInsurance, setShowInsurance] = useState(false);
+  const [showRecheck, setShowRecheck] = useState(false);
   const [showReject, setShowReject] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [showCancel, setShowCancel] = useState(false);
@@ -237,6 +309,10 @@ export default function PrescriptionDetailPage() {
   // least one line has actually been dispensed (mirrors pharmacy.Service.SubmitInsuranceClaim's
   // own precondition on the server side).
   const canBillInsurance = rx.status === 'dispensed' || rx.status === 'partially_dispensed';
+  // Mirrors hospital-api's RecheckInteractions's own canReflag condition — re-checking a
+  // dispensed/rejected/cancelled prescription still records the check for audit but can't
+  // change a status that's already terminal, so the action is hidden there.
+  const canRecheck = ['pending', 'flagged', 'pharmacist_review', 'approved', 'locked'].includes(rx.status);
   // Per hospital-api's contract, an override_reason is required for BOTH the 'flagged' status (a
   // minor/moderate drug-interaction/allergy finding) and the stricter 'pharmacist_review' status
   // (a major/contraindicated interaction) — pharmacist_review is the more serious of the two, so
@@ -313,6 +389,14 @@ export default function PrescriptionDetailPage() {
               <Button variant="outline" className="gap-2" onClick={() => setShowInsurance(true)}>
                 <ShieldCheck className="h-4 w-4" />
                 Bill to Insurance
+              </Button>
+            </Can>
+          )}
+          {canRecheck && (
+            <Can permission="hospital.pharmacy.manage">
+              <Button variant="outline" className="gap-2" onClick={() => setShowRecheck(true)}>
+                <RefreshCw className="h-4 w-4" />
+                Re-check Interactions
               </Button>
             </Can>
           )}
@@ -561,6 +645,7 @@ export default function PrescriptionDetailPage() {
                   <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">Instructions</th>
                   <th className="text-center px-4 py-3 font-semibold text-muted-foreground">Prescribed</th>
                   <th className="text-center px-4 py-3 font-semibold text-muted-foreground">Dispensed</th>
+                  <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Label</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -585,6 +670,19 @@ export default function PrescriptionDetailPage() {
                         {line.quantity_dispensed}
                       </span>
                     </td>
+                    <td className="px-4 py-3.5 text-right">
+                      {line.quantity_dispensed > 0 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                          onClick={() => printLabel(line.id, `${line.drug_name}-label`)}
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                          Print
+                        </Button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -602,6 +700,8 @@ export default function PrescriptionDetailPage() {
           onClose={() => setShowInsurance(false)}
         />
       )}
+      {showRecheck && <RecheckModal prescriptionId={rx.id} onClose={() => setShowRecheck(false)} />}
+      <PdfPreview {...previewProps} />
     </div>
   );
 }

@@ -55,7 +55,7 @@ export default function UsersPage() {
   const rows = users ?? [];
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className="max-w-7xl mx-auto">
       <PageHeader
         title="Staff & Roles"
         subtitle="Tenant staff provisioned into hospital-api and their assigned role — new staff are added via Sign-In (SSO), not here"
@@ -99,11 +99,11 @@ export default function UsersPage() {
                         permission={P.USERS_MANAGE}
                         fallback={
                           <span className="text-xs font-medium text-muted-foreground">
-                            {u.roles[0] ?? 'No role'}
+                            {(u.roles ?? [])[0] ?? 'No role'}
                           </span>
                         }
                       >
-                        <RoleCell userId={u.id} currentRole={u.roles[0] ?? ''} />
+                        <RoleCell userId={u.id} currentRole={(u.roles ?? [])[0] ?? ''} />
                       </Can>
                     </td>
                   </tr>

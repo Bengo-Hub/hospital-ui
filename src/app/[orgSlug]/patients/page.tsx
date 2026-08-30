@@ -147,24 +147,36 @@ function RegisterPatientModal({ onClose, onRegistered }: { onClose: () => void; 
   );
 }
 
-function PatientRow({ patient, onOpenVisit, pending }: { patient: Patient; onOpenVisit: (id: string) => void; pending: boolean }) {
+function PatientRow({ patient, orgSlug, onOpenVisit, pending }: { patient: Patient; orgSlug: string; onOpenVisit: (id: string) => void; pending: boolean }) {
   return (
     <tr className="hover:bg-accent/20 transition-colors">
       <td className="px-4 py-3.5 font-mono text-xs">{patient.mrn}</td>
-      <td className="px-4 py-3.5 font-medium">{patient.full_name}</td>
+      <td className="px-4 py-3.5 font-medium">
+        <Link href={`/${orgSlug}/patients/${patient.id}`} className="hover:text-primary hover:underline">
+          {patient.full_name}
+        </Link>
+      </td>
       <td className="px-4 py-3.5 text-muted-foreground">{patient.phone || '—'}</td>
       <td className="px-4 py-3.5 text-muted-foreground">{patient.id_number || '—'}</td>
       <td className="px-4 py-3.5 text-right">
-        <Can permission="hospital.records.add">
-          <button
-            onClick={() => onOpenVisit(patient.id)}
-            disabled={pending}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+        <div className="flex items-center justify-end gap-2">
+          <Link
+            href={`/${orgSlug}/patients/${patient.id}`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-accent transition-colors"
           >
-            <ClipboardPlus className="h-3.5 w-3.5" />
-            Open Visit
-          </button>
-        </Can>
+            View
+          </Link>
+          <Can permission="hospital.records.add">
+            <button
+              onClick={() => onOpenVisit(patient.id)}
+              disabled={pending}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              <ClipboardPlus className="h-3.5 w-3.5" />
+              Open Visit
+            </button>
+          </Can>
+        </div>
       </td>
     </tr>
   );
@@ -279,7 +291,7 @@ function PatientsPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {(patients ?? []).map((p) => (
-                <PatientRow key={p.id} patient={p} onOpenVisit={handleOpenVisit} pending={openingId === p.id} />
+                <PatientRow key={p.id} patient={p} orgSlug={orgSlug} onOpenVisit={handleOpenVisit} pending={openingId === p.id} />
               ))}
             </tbody>
           </table>

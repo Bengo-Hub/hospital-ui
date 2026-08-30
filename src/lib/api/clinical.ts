@@ -40,6 +40,17 @@ export interface RegisterPatientInput {
   outlet_id?: string;
 }
 
+export interface UpdatePatientInput {
+  full_name?: string;
+  dob?: string;
+  sex?: string;
+  phone?: string;
+  id_number?: string;
+  address?: string;
+  next_of_kin?: string;
+  allergy_flags?: string[];
+}
+
 export const patientsApi = {
   register: (orgSlug: string, data: RegisterPatientInput) =>
     apiClient.post<Patient>(`${hospitalBase(orgSlug)}/patients`, data),
@@ -49,6 +60,8 @@ export const patientsApi = {
   },
   get: (orgSlug: string, patientId: string) =>
     apiClient.get<Patient>(`${hospitalBase(orgSlug)}/patients/${patientId}`),
+  update: (orgSlug: string, patientId: string, data: UpdatePatientInput) =>
+    apiClient.put<Patient>(`${hospitalBase(orgSlug)}/patients/${patientId}`, data),
 };
 
 // ── Visits ───────────────────────────────────────────────────────────────────────────────
@@ -90,6 +103,10 @@ export const visitsApi = {
   },
   get: (orgSlug: string, visitId: string) =>
     apiClient.get<PatientVisit>(`${hospitalBase(orgSlug)}/visits/${visitId}`),
+  listByPatient: async (orgSlug: string, patientId: string): Promise<PatientVisit[]> => {
+    const res = await apiClient.get<{ data: PatientVisit[] }>(`${hospitalBase(orgSlug)}/visits`, { patient_id: patientId });
+    return unwrapList(res);
+  },
 };
 
 // ── Triage ───────────────────────────────────────────────────────────────────────────────

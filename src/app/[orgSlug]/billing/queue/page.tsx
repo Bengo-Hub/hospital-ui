@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { Banknote, CreditCard, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, Button, Badge, Input } from '@/components/ui/base';
@@ -124,8 +126,24 @@ function CollectModal({ charge, onClose }: { charge: BillableCharge; onClose: ()
   );
 }
 
+// Which worklist a charge's source_module cross-links to — coarse (the module's queue, not the
+// exact order/prescription: a charge only carries a per-LINE source_reference_id, not the
+// parent order's id, so resolving the exact record would need an extra lookup per row).
+const SOURCE_MODULE_LINK: Record<string, string> = {
+  lab: '/laboratory',
+  pharmacy: '/pharmacy',
+  triage: '/triage',
+  consultation: '/consultation/queue',
+  records: '/patients',
+};
+
 export default function BillingQueuePage() {
-  const [department, setDepartment] = useState('');
+  const params = useParams();
+  const orgSlug = params?.orgSlug as string;
+  const searchParams = useSearchParams();
+  // Pre-filter when arriving via a cross-link (e.g. "View Charges" on a lab order row) —
+  // department stays local state after that so the user can freely change the filter.
+  const [department, setDepartment] = useState(() => searchParams?.get('department') ?? '');
   const { data: charges, isLoading } = usePendingCharges(department || undefined);
   const [collectCharge, setCollectCharge] = useState<BillableCharge | null>(null);
 
@@ -183,7 +201,15 @@ export default function BillingQueuePage() {
                 {rows.map((c) => (
                   <tr key={c.id} className="hover:bg-accent/20 transition-colors">
                     <td className="px-4 py-3.5 font-medium">{c.description}</td>
-                    <td className="px-4 py-3.5 text-muted-foreground text-xs uppercase">{c.source_module}</td>
+                    <td className="px-4 py-3.5 text-xs uppercase">
+                      {SOURCE_MODULE_LINK[c.source_module] ? (
+                        <Link href={`/${orgSlug}${SOURCE_MODULE_LINK[c.source_module]}`} className="text-primary hover:underline">
+                          {c.source_module}
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground">{c.source_module}</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3.5 text-right font-mono">{c.amount.toFixed(2)}</td>
                     <td className="px-4 py-3.5">
                       <ChargeStatusBadge status={c.status} />

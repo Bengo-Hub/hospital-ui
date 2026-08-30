@@ -116,6 +116,18 @@ export function useDeactivateLabTestEntry() {
   });
 }
 
+export function useCancelLabOrder() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, reason }: { orderId: string; reason?: string }) => labApi.cancelOrder(orgSlug, orderId, reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['hospital', 'lab-orders', orgSlug] });
+      qc.invalidateQueries({ queryKey: ['hospital', 'billing-queue', orgSlug] });
+    },
+  });
+}
+
 export function useSubmitLabInsuranceClaim() {
   const orgSlug = useOrgSlug();
   const qc = useQueryClient();

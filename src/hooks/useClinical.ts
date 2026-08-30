@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import {
   patientsApi, visitsApi, triageApi, examinationApi, diagnosisCatalogApi, referralsApi,
-  type RegisterPatientInput, type CheckInVisitInput, type RecordTriageInput,
+  type RegisterPatientInput, type UpdatePatientInput, type CheckInVisitInput, type RecordTriageInput,
   type RecordExaminationInput, type ReferredTo,
 } from '@/lib/api/clinical';
 
@@ -42,6 +42,19 @@ export function useRegisterPatient() {
   });
 }
 
+export function useUpdatePatient() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ patientId, data }: { patientId: string; data: UpdatePatientInput }) =>
+      patientsApi.update(orgSlug, patientId, data),
+    onSuccess: (_res, { patientId }) => {
+      qc.invalidateQueries({ queryKey: ['hospital', 'patients', orgSlug] });
+      qc.invalidateQueries({ queryKey: ['hospital', 'patients', orgSlug, patientId] });
+    },
+  });
+}
+
 // ── Visits ───────────────────────────────────────────────────────────────────────────────
 
 export function useVisits(status?: string) {
@@ -60,6 +73,15 @@ export function useVisit(visitId?: string) {
     queryKey: ['hospital', 'visits', orgSlug, visitId],
     queryFn: () => visitsApi.get(orgSlug, visitId as string),
     enabled: !!orgSlug && !!visitId,
+  });
+}
+
+export function useVisitsByPatient(patientId?: string) {
+  const orgSlug = useOrgSlug();
+  return useQuery({
+    queryKey: ['hospital', 'visits', orgSlug, 'by-patient', patientId],
+    queryFn: () => visitsApi.listByPatient(orgSlug, patientId as string),
+    enabled: !!orgSlug && !!patientId,
   });
 }
 

@@ -134,7 +134,7 @@ export default function LabTestCatalogPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className="max-w-7xl mx-auto">
       <PageHeader
         title="Lab Test Catalog"
         subtitle="Your facility's own tests, additive to the global starter catalogue"

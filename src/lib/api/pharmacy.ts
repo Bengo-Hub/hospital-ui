@@ -6,6 +6,18 @@ import { apiClient } from './client';
 import { hospitalBase, unwrapList } from './types';
 import type { InsuranceClaimResult } from './billing';
 
+export interface InteractionCheck {
+  id: string;
+  prescription_id?: string;
+  drug_skus?: string[];
+  result: 'clear' | 'interactions_found' | 'allergy_match';
+  details?: {
+    interactions?: { severity?: string; description?: string; drugs?: string[] }[];
+    allergy_matches?: { allergy?: string; sku?: string; description?: string }[];
+  };
+  checked_at: string;
+}
+
 export type PrescriptionStatus =
   | 'pending' | 'pharmacist_review' | 'flagged' | 'approved' | 'locked'
   | 'partially_dispensed' | 'dispensed' | 'rejected' | 'cancelled';
@@ -170,4 +182,13 @@ export const pharmacyApi = {
       `${hospitalBase(orgSlug)}/prescriptions/${id}/insurance-claim`,
       data
     ),
+  recheckInteractions: (orgSlug: string, id: string, allergyFlags?: string[]) =>
+    apiClient.post<{ check: InteractionCheck; prescription: Prescription }>(
+      `${hospitalBase(orgSlug)}/prescriptions/${id}/recheck-interactions`,
+      { allergy_flags: allergyFlags }
+    ),
+  /** Preview-first: fetched as a blob and shown via shared-ui-lib's PdfPreview, never a raw
+   *  navigation — mirrors treasury-ui's own document-preview convention. */
+  downloadLabel: (orgSlug: string, prescriptionId: string, lineId: string) =>
+    apiClient.getBlob(`${hospitalBase(orgSlug)}/prescriptions/${prescriptionId}/lines/${lineId}/label.pdf`),
 };

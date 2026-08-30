@@ -107,6 +107,8 @@ export const labApi = {
     apiClient.get<{ order: LabOrder; lines: LabOrderLine[] }>(`${hospitalBase(orgSlug)}/lab-orders/${orderId}`),
   activateIfPaid: (orgSlug: string, orderId: string) =>
     apiClient.post<LabOrder>(`${hospitalBase(orgSlug)}/lab-orders/${orderId}/activate`),
+  cancelOrder: (orgSlug: string, orderId: string, reason?: string) =>
+    apiClient.post<LabOrder>(`${hospitalBase(orgSlug)}/lab-orders/${orderId}/cancel`, { reason }),
   enterResult: (orgSlug: string, lineId: string, data: EnterResultInput) =>
     apiClient.post<LabOrderLine>(`${hospitalBase(orgSlug)}/lab-orders/lines/${lineId}/result`, data),
   listCatalog: async (orgSlug: string): Promise<CatalogTest[]> => {

@@ -165,7 +165,7 @@ export default function BillingSettingsPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className="max-w-6xl mx-auto">
       <PageHeader
         title="Billing Item Catalog"
         subtitle="Your facility's configured price list — drives billing_queue vs. direct collection and prepayment gating per item"

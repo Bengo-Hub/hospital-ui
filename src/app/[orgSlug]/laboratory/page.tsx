@@ -1,10 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { FlaskConical, Loader2, Plus, ShieldCheck, Zap, X } from 'lucide-react';
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import { Banknote, FlaskConical, Loader2, Plus, ShieldCheck, XCircle, Zap, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, Button, Badge, Input } from '@/components/ui/base';
 import { PageHeader, EmptyState, Skeleton } from '@/components/ui/page';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Can } from '@/components/auth/can';
 import { useAppPermissions } from '@/hooks/use-app-permissions';
 import { apiErrorMessage } from '@/lib/api/error-message';
@@ -14,6 +17,7 @@ import {
   useLabTestCatalog,
   useCreateLabOrder,
   useActivateLabOrder,
+  useCancelLabOrder,
   useEnterLabResult,
   useSubmitLabInsuranceClaim,
 } from '@/hooks/useLab';
@@ -368,12 +372,15 @@ function LabFlagBadge({ flag }: { flag: ResultFlag }) {
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 export default function LaboratoryPage() {
+  const params = useParams();
+  const orgSlug = params?.orgSlug as string;
   const [statusFilter, setStatusFilter] = useState<LabOrderStatus | ''>('');
   const [createOpen, setCreateOpen] = useState(false);
   const [resultsOrder, setResultsOrder] = useState<LabOrder | null>(null);
   const [insuranceOrder, setInsuranceOrder] = useState<LabOrder | null>(null);
   const { data: orders, isLoading } = useLabWorklist(statusFilter || undefined);
   const activate = useActivateLabOrder();
+  const cancelOrder = useCancelLabOrder();
   const submitInsuranceClaim = useSubmitLabInsuranceClaim();
   const { can } = useAppPermissions();
 
@@ -383,6 +390,19 @@ export default function LaboratoryPage() {
       toast.success('Lab order activated');
     } catch (e) {
       toast.error(await apiErrorMessage(e, 'Failed to activate lab order — confirm the linked charge has been paid'));
+    }
+  };
+
+  const [cancelTarget, setCancelTarget] = useState<LabOrder | null>(null);
+  const confirmCancel = async () => {
+    if (!cancelTarget) return;
+    try {
+      await cancelOrder.mutateAsync({ orderId: cancelTarget.id });
+      toast.success('Lab order cancelled');
+    } catch (e) {
+      toast.error(await apiErrorMessage(e, 'Failed to cancel lab order'));
+    } finally {
+      setCancelTarget(null);
     }
   };
 
@@ -488,6 +508,27 @@ export default function LaboratoryPage() {
                             {o.status === 'resulted' ? 'Edit Results' : 'Enter Results'}
                           </Button>
                         )}
+                        {(o.status === 'requested' || o.status === 'awaiting_payment') && (
+                          <Can permission="hospital.lab.manage">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10"
+                              onClick={() => setCancelTarget(o)}
+                              disabled={cancelOrder.isPending}
+                            >
+                              <XCircle className="h-3.5 w-3.5" />
+                              Cancel
+                            </Button>
+                          </Can>
+                        )}
+                        <Link
+                          href={`/${orgSlug}/billing/queue?department=lab`}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:bg-accent transition-colors"
+                          title="View this order's charges on the Billing queue"
+                        >
+                          <Banknote className="h-3.5 w-3.5" />
+                        </Link>
                       </div>
                     </td>
                   </tr>
@@ -510,6 +551,15 @@ export default function LaboratoryPage() {
           onClose={() => setInsuranceOrder(null)}
         />
       )}
+      <ConfirmDialog
+        open={!!cancelTarget}
+        title="Cancel lab order?"
+        description="Any pending charge for this order will be waived. This cannot be undone."
+        variant="danger"
+        confirmLabel="Cancel Order"
+        onConfirm={confirmCancel}
+        onCancel={() => setCancelTarget(null)}
+      />
     </div>
   );
 }

@@ -18,7 +18,7 @@ export default function ConfigPage() {
   const { data: config, isLoading } = useHospitalConfig();
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
+    <div className="max-w-2xl mx-auto">
       <PageHeader
         title="Config"
         subtitle="Read-only — resolved from your subscription plan (Settings & Subscriptions manages the plan itself)"

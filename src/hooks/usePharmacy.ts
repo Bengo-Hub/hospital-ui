@@ -94,6 +94,16 @@ export function useVerifyWitness() {
   });
 }
 
+export function useRecheckInteractions() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, allergyFlags }: { id: string; allergyFlags?: string[] }) =>
+      pharmacyApi.recheckInteractions(orgSlug, id, allergyFlags),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hospital', 'prescriptions', orgSlug] }),
+  });
+}
+
 export function useSubmitPharmacyInsuranceClaim() {
   const orgSlug = useOrgSlug();
   const qc = useQueryClient();
