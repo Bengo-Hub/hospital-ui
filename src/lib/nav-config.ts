@@ -19,9 +19,11 @@ import {
   FileText,
   FlaskConical,
   HeartPulse,
+  History,
   LayoutDashboard,
   Pill,
   Settings,
+  Shield,
   ShieldAlert,
   Stethoscope,
   UserPlus,
@@ -147,8 +149,20 @@ export const NAV_ENTRIES: NavEntry[] = [
   { label: 'Appointments', icon: ClipboardList, href: '/appointments', module: 'appointments', comingSoon: true },
   { label: 'Admissions & Beds', icon: Bed, href: '/admissions', module: 'admissions', comingSoon: true },
 
-  // Baseline tenant administration (2026-08-30) — available at every facility tier, gated purely
-  // by RBAC permission (module is in ALWAYS_VISIBLE, so facilityModulesFor never hides these).
-  { label: 'Staff & Roles', icon: Users, href: '/users', module: 'users', permission: P.USERS_VIEW },
+  // Baseline tenant administration (2026-08-30, expanded same day with role customization/audit
+  // log) — available at every facility tier, gated purely by RBAC permission (module is in
+  // ALWAYS_VISIBLE, so facilityModulesFor never hides these). Roles requires only USERS_VIEW
+  // (read-only for a viewer, matching the page's own in-page edit gate); Audit Log requires the
+  // stricter USERS_MANAGE, matching its backend route's gate.
+  {
+    label: 'Staff & Roles',
+    icon: Users,
+    module: 'users',
+    items: [
+      { label: 'Staff', icon: Users, href: '/users', permission: P.USERS_VIEW },
+      { label: 'Roles & Permissions', icon: Shield, href: '/roles', permission: P.USERS_VIEW },
+      { label: 'Audit Log', icon: History, href: '/audit-log', permission: P.USERS_MANAGE },
+    ],
+  },
   { label: 'Config', icon: Settings, href: '/config', module: 'config', permission: P.CONFIG_VIEW },
 ];

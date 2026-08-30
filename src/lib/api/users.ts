@@ -1,8 +1,9 @@
 /** Tenant staff/role-management admin surface — hospital-api's Users module.
  * Real user identity/creation stays owned by auth-api (see
- * shared-docs/architecture/cross-service-data-ownership.md); this is scoped to hospital-api's
- * OWN service-level role assignment only (list users, list the global role catalog, change a
- * user's role). */
+ * shared-docs/architecture/cross-service-data-ownership.md); "Invite staff" below relays to
+ * auth-api's own S2S member endpoint rather than hospital-api inventing its own identity store —
+ * this module otherwise stays scoped to hospital-api's OWN service-level role assignment (list
+ * users, list/customize/create roles, change a user's role(s), deactivate/reactivate). */
 
 import { apiClient } from './client';
 import { hospitalBase, unwrapList } from './types';
@@ -17,20 +18,73 @@ export interface HospitalUserRow {
 }
 
 export interface HospitalRoleOption {
+  id: string;
   code: string;
   name: string;
   description?: string;
+  is_system_role: boolean;
+  is_custom: boolean;
+  cloned_from_role_id?: string;
+}
+
+export interface HospitalPermissionOption {
+  code: string;
+  name: string;
+  module: string;
+  action: string;
+}
+
+export interface InviteMemberInput {
+  email: string;
+  name?: string;
+  role_code: string;
+  outlet_id?: string;
+}
+
+export interface InviteMemberResult {
+  auth_user_id: string;
+  status?: string;
+  /** Returned ONCE when this invite created a brand-new auth-api account — show it to the
+   *  admin exactly once, never persist or log it. */
+  temp_password?: string;
 }
 
 export const usersApi = {
   list: (orgSlug: string) =>
     apiClient.get<{ data: HospitalUserRow[] }>(`${hospitalBase(orgSlug)}/users`).then(unwrapList),
 
-  listRoles: (orgSlug: string) =>
-    apiClient.get<{ data: HospitalRoleOption[] }>(`${hospitalBase(orgSlug)}/roles`).then(unwrapList),
+  invite: (orgSlug: string, input: InviteMemberInput) =>
+    apiClient.post<{ data: InviteMemberResult }>(`${hospitalBase(orgSlug)}/users/invite`, input).then((r) => r.data),
 
   setRole: (orgSlug: string, userId: string, roleCode: string) =>
     apiClient.put(`${hospitalBase(orgSlug)}/users/${userId}/role`, { role_code: roleCode }),
+
+  setStatus: (orgSlug: string, userId: string, status: string) =>
+    apiClient.put(`${hospitalBase(orgSlug)}/users/${userId}/status`, { status }),
+
+  assignExtraRole: (orgSlug: string, userId: string, roleCode: string) =>
+    apiClient.post(`${hospitalBase(orgSlug)}/users/${userId}/roles`, { role_code: roleCode }),
+
+  revokeExtraRole: (orgSlug: string, userId: string, roleCode: string) =>
+    apiClient.delete(`${hospitalBase(orgSlug)}/users/${userId}/roles/${encodeURIComponent(roleCode)}`),
+
+  listRoles: (orgSlug: string) =>
+    apiClient.get<{ data: HospitalRoleOption[] }>(`${hospitalBase(orgSlug)}/roles`).then(unwrapList),
+
+  listPermissions: (orgSlug: string) =>
+    apiClient.get<{ data: HospitalPermissionOption[] }>(`${hospitalBase(orgSlug)}/permissions`).then(unwrapList),
+
+  getRolePermissions: (orgSlug: string, roleId: string) =>
+    apiClient.get<{ data: HospitalPermissionOption[] }>(`${hospitalBase(orgSlug)}/roles/${roleId}/permissions`).then(unwrapList),
+
+  customizeRole: (orgSlug: string, roleCode: string) =>
+    apiClient.post<{ data: HospitalRoleOption }>(`${hospitalBase(orgSlug)}/roles/customize`, { role_code: roleCode }).then((r) => r.data),
+
+  createRole: (orgSlug: string, input: { role_code: string; name: string; description?: string; permission_codes: string[] }) =>
+    apiClient.post<{ data: HospitalRoleOption }>(`${hospitalBase(orgSlug)}/roles`, input).then((r) => r.data),
+
+  updateRolePermissions: (orgSlug: string, roleId: string, permissionCodes: string[]) =>
+    apiClient.put(`${hospitalBase(orgSlug)}/roles/${roleId}/permissions`, { permission_codes: permissionCodes }),
 };
 
 export interface HospitalConfig {
