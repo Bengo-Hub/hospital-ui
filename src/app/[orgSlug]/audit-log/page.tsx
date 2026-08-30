@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { History } from 'lucide-react';
+import { History, ShieldOff } from 'lucide-react';
 import { Badge } from '@/components/ui/base';
-import { PageHeader } from '@/components/ui/page';
+import { PageHeader, EmptyState } from '@/components/ui/page';
+import { useAppPermissions } from '@/hooks/use-app-permissions';
 import { useAuditLog } from '@/hooks/useAuditLog';
 import { auditActionLabel } from '@/lib/api/audit-log';
+import { P } from '@/lib/rbac/permissions';
 import { DataTable, type DataTableColumn } from '@bengo-hub/shared-ui-lib/data-table';
 import type { AuditLogEntry } from '@/lib/api/audit-log';
 
@@ -21,9 +23,11 @@ function ChangeSummary({ entry }: { entry: AuditLogEntry }) {
 }
 
 export default function AuditLogPage() {
+  const { can } = useAppPermissions();
+  const canView = can(P.USERS_MANAGE);
   const [page, setPage] = useState(1);
   const limit = 20;
-  const { data, isLoading } = useAuditLog(page, limit);
+  const { data, isLoading } = useAuditLog(page, limit, canView);
   const rows = data?.data ?? [];
 
   const columns: DataTableColumn<AuditLogEntry>[] = [
@@ -57,18 +61,26 @@ export default function AuditLogPage() {
         icon={<History className="h-5 w-5" />}
       />
 
-      <DataTable
-        columns={columns}
-        rows={rows}
-        rowKey={(e) => e.id}
-        loading={isLoading}
-        loadingRows={6}
-        emptyText="No RBAC activity recorded yet."
-        page={data?.page ?? page}
-        totalPages={data && data.limit > 0 ? Math.max(1, Math.ceil(data.total / data.limit)) : 1}
-        onPageChange={setPage}
-        total={data?.total}
-      />
+      {!canView ? (
+        <EmptyState
+          icon={<ShieldOff className="h-10 w-10" />}
+          title="You don't have access to this page"
+          description="Viewing the audit log requires the hospital.users.manage permission."
+        />
+      ) : (
+        <DataTable
+          columns={columns}
+          rows={rows}
+          rowKey={(e) => e.id}
+          loading={isLoading}
+          loadingRows={6}
+          emptyText="No RBAC activity recorded yet."
+          page={data?.page ?? page}
+          totalPages={data && data.limit > 0 ? Math.max(1, Math.ceil(data.total / data.limit)) : 1}
+          onPageChange={setPage}
+          total={data?.total}
+        />
+      )}
     </div>
   );
 }
