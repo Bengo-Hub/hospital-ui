@@ -28,12 +28,12 @@ export function usePrescription(id?: string) {
   });
 }
 
-export function useControlledSubstanceLogs() {
+export function useControlledSubstanceLogs(enabled = true) {
   const orgSlug = useOrgSlug();
   return useQuery({
     queryKey: ['hospital', 'controlled-substances', orgSlug],
     queryFn: () => pharmacyApi.listControlledSubstanceLogs(orgSlug),
-    enabled: !!orgSlug,
+    enabled: !!orgSlug && enabled,
   });
 }
 

@@ -9,6 +9,7 @@ import { useBranding } from '@/providers/branding-provider';
 import { useAuthStore } from '@/store/auth';
 import { facilityModulesFor, useFacilityType } from '@/lib/facility-nomenclature';
 import { NAV_ENTRIES, isNavGroup, type NavItem, type NavGroup } from '@/lib/nav-config';
+import { useAppPermissions } from '@/hooks/use-app-permissions';
 
 interface SidebarProps {
   open?: boolean;
@@ -105,9 +106,27 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const logout = useAuthStore((s) => s.logout);
   const user = useAuthStore((s) => s.user);
   const facilityType = useFacilityType();
+  const { canAny } = useAppPermissions();
 
   const visibleModules = new Set(facilityModulesFor(facilityType));
-  const navEntries = NAV_ENTRIES.filter((entry) => visibleModules.has(entry.module));
+  const itemVisible = (item: NavItem) => !item.permission || canAny(([] as string[]).concat(item.permission));
+
+  // Two gating axes, applied in order: facility type decides which MODULES exist for this
+  // tenant at all; RBAC permission then decides which of THIS user's roles can actually reach
+  // each link/group. A flat link disappears if either check fails. A group disappears entirely
+  // if its module is out of scope, or if every one of its items is permission-filtered away
+  // (never render an empty dropdown with a chevron and nothing inside it).
+  const navEntries = NAV_ENTRIES
+    .filter((entry) => visibleModules.has(entry.module))
+    .reduce<typeof NAV_ENTRIES>((acc, entry) => {
+      if (!isNavGroup(entry)) {
+        if (itemVisible(entry)) acc.push(entry);
+        return acc;
+      }
+      const items = entry.items.filter(itemVisible);
+      if (items.length > 0) acc.push({ ...entry, items });
+      return acc;
+    }, []);
 
   const displayName = user?.fullName || tenant?.orgName || orgSlug;
   const displayInitial = displayName?.[0]?.toUpperCase() ?? '?';

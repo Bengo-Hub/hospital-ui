@@ -15,7 +15,7 @@ export default function ControlledSubstancesPage() {
   const orgSlug = params?.orgSlug as string;
   const { can } = useAppPermissions();
   const allowed = can(REGISTER_PERMISSION);
-  const { data: logs, isLoading } = useControlledSubstanceLogs();
+  const { data: logs, isLoading } = useControlledSubstanceLogs(allowed);
 
   const rows = logs ?? [];
 

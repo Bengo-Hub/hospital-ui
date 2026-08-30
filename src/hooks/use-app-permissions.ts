@@ -12,11 +12,13 @@
  *   1. If hospital-api's /auth/me `permissions[]` (merged RBAC, or the SSO-fallback profile while
  *      hospital-api's local RBAC sync hasn't shipped yet — see src/lib/auth/api.ts) is a NON-EMPTY
  *      array → trust it as-is (server-authoritative).
- *   2. Otherwise (empty or absent — including the pre-first-fetch bootstrap window) → no permission
- *      catalog is defined for hospital-api's domain yet (Sprint-0), so the effective set is empty
- *      UNLESS the user is a superuser/platform owner (see 3). Once hospital-api ships a permission
- *      catalog + role→permission map, add the same client-side fallback derivation pos-ui/treasury-ui
- *      use — don't invent one here ahead of the backend contract.
+ *   2. Otherwise (empty or absent — including the pre-first-fetch bootstrap window, a provisioning
+ *      race, or an SSO role the JIT mapper doesn't recognise) → derive a default set from role via
+ *      the client-side ROLE_PERMISSIONS map (src/lib/rbac/permissions.ts), mirroring hospital-api's
+ *      own rbac/seed.go. Same trade-off pos-ui's usePermissions.ts documents and was burned into by
+ *      a real 2026-07-19 P0 (waiters locked out fleet-wide when an empty array was treated as
+ *      authoritative instead of falling back): a role revoked down to a genuinely empty grant set
+ *      won't be reflected until re-auth, but nobody is silently blanked by a transient/unmapped gap.
  *   3. superuser / hospital_admin / platform-owner roles always pass every check.
  *
  * Usage:
@@ -26,9 +28,7 @@
 
 import { useMemo } from 'react';
 import { useAuthStore } from '@/store/auth';
-
-// Roles treated as tenant/platform superuser — bypass every permission check.
-const SUPERUSER_ROLES = ['superuser', 'admin', 'hospital_admin', 'super_admin'];
+import { ROLE_PERMISSIONS, SUPERUSER_ROLES } from '@/lib/rbac/permissions';
 
 export function useAppPermissions() {
   const user = useAuthStore((s) => s.user);
@@ -54,11 +54,13 @@ export function useAppPermissions() {
       return new Set(serverPerms);
     }
 
-    // No client-side role→permission catalog exists for hospital-api's domain yet — an empty
-    // server array means "no additional grants", not "derive from role" (unlike pos-ui, which has
-    // a mature ROLE_PERMISSIONS map to fall back to). Module visibility should key off subscription
-    // (see docs/ux-ui.md § Navigation) until hospital-api ships its own permission catalog.
-    return new Set<string>();
+    // Fall back to the client-side role→permission map (see the doc comment above).
+    const derived = new Set<string>();
+    for (const role of roles) {
+      const rolePerms = ROLE_PERMISSIONS[role] ?? [];
+      for (const p of rolePerms) derived.add(p);
+    }
+    return derived;
   }, [user]);
 
   const isSuperuser = effectivePermissions.has('*');

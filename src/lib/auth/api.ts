@@ -1,5 +1,6 @@
 import { apiClient } from '@/lib/api/client';
 import { revokeServerSession as sharedRevokeServerSession } from '@bengo-hub/shared-ui-lib/auth';
+import { SUPERUSER_ROLES } from '@/lib/rbac/permissions';
 
 const SSO_BASE_URL =
     process.env.NEXT_PUBLIC_AUTH_URL || process.env.NEXT_PUBLIC_SSO_URL || 'https://sso.codevertexafrica.com';
@@ -35,7 +36,6 @@ export async function fetchHospitalProfile(tenantSlug: string, accessToken?: str
             roles: string[];
             permissions: string[];
             is_platform_owner: boolean;
-            is_superuser: boolean;
         }>(`/api/v1/${tenantSlug}/hospital/auth/me`);
 
         const roles: string[] = Array.isArray(data.roles) ? data.roles : [];
@@ -48,7 +48,12 @@ export async function fetchHospitalProfile(tenantSlug: string, accessToken?: str
             tenant_id: data.tenant_id ?? '',
             tenant_slug: data.tenant_slug ?? tenantSlug,
             isPlatformOwner: data.is_platform_owner === true,
-            isSuperUser: roles.includes('superuser') || roles.includes('hospital_admin'),
+            // hospital-api's /auth/me never actually sends an is_superuser field (it only sends
+            // roles/permissions/is_platform_owner) — this used to reference that phantom field and
+            // fall back to a hand-rolled, incomplete role check (missing 'admin', hospital-api's
+            // actual wildcard role). Derived from the SAME SUPERUSER_ROLES list useAppPermissions
+            // uses, so the two can never drift again.
+            isSuperUser: roles.some((r) => SUPERUSER_ROLES.includes(String(r).toLowerCase())),
         };
     } catch (err: unknown) {
         const status = (err as { response?: { status?: number } })?.response?.status;
@@ -216,6 +221,6 @@ export async function fetchProfile(accessToken?: string): Promise<HospitalProfil
         tenant_id: data.tenant_id ?? '',
         tenant_slug: data.tenant_slug ?? '',
         isPlatformOwner: data.is_platform_owner === true || (data.tenant_slug ?? '') === 'codevertex',
-        isSuperUser: roles.includes('superuser'),
+        isSuperUser: roles.some((r) => SUPERUSER_ROLES.includes(String(r).toLowerCase())),
     };
 }
