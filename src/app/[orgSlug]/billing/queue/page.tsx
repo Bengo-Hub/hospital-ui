@@ -26,6 +26,7 @@ const CHARGE_STATUS_BADGE: Record<ChargeStatus, 'default' | 'success' | 'warning
   pending: 'warning',
   invoiced: 'default',
   paid: 'success',
+  exempted: 'success',
   waived: 'outline',
   written_off: 'outline',
 };

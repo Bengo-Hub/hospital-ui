@@ -2,7 +2,13 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
-import { labApi, type CreateLabOrderInput, type EnterResultInput } from '@/lib/api/lab';
+import {
+  labApi,
+  type CreateLabOrderInput,
+  type EnterResultInput,
+  type CreateLabTestEntryInput,
+  type UpdateLabTestEntryInput,
+} from '@/lib/api/lab';
 
 function useOrgSlug(): string {
   const params = useParams();
@@ -62,6 +68,65 @@ export function useEnterLabResult() {
   return useMutation({
     mutationFn: ({ lineId, data }: { lineId: string; data: EnterResultInput }) =>
       labApi.enterResult(orgSlug, lineId, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hospital', 'lab-orders', orgSlug] }),
+  });
+}
+
+// ── Tenant Lab Test Catalog admin ────────────────────────────────────────────────────────────
+
+export function useLabTestCatalogEntries(includeInactive = false) {
+  const orgSlug = useOrgSlug();
+  return useQuery({
+    queryKey: ['hospital', 'lab-test-catalog-entries', orgSlug, includeInactive],
+    queryFn: () => labApi.listTenantCatalogEntries(orgSlug, includeInactive),
+    enabled: !!orgSlug,
+  });
+}
+
+function invalidateLabCatalog(qc: ReturnType<typeof useQueryClient>, orgSlug: string) {
+  qc.invalidateQueries({ queryKey: ['hospital', 'lab-test-catalog-entries', orgSlug] });
+  qc.invalidateQueries({ queryKey: ['hospital', 'lab-test-catalog', orgSlug] });
+}
+
+export function useCreateLabTestEntry() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateLabTestEntryInput) => labApi.createCatalogEntry(orgSlug, data),
+    onSuccess: () => invalidateLabCatalog(qc, orgSlug),
+  });
+}
+
+export function useUpdateLabTestEntry() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ entryId, data }: { entryId: string; data: UpdateLabTestEntryInput }) =>
+      labApi.updateCatalogEntry(orgSlug, entryId, data),
+    onSuccess: () => invalidateLabCatalog(qc, orgSlug),
+  });
+}
+
+export function useDeactivateLabTestEntry() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (entryId: string) => labApi.deactivateCatalogEntry(orgSlug, entryId),
+    onSuccess: () => invalidateLabCatalog(qc, orgSlug),
+  });
+}
+
+export function useSubmitLabInsuranceClaim() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      orderId,
+      data,
+    }: {
+      orderId: string;
+      data: { provider_id: string; coverage_id?: string; outlet_id?: string };
+    }) => labApi.submitInsuranceClaim(orgSlug, orderId, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['hospital', 'lab-orders', orgSlug] }),
   });
 }

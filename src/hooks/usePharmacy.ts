@@ -93,3 +93,18 @@ export function useVerifyWitness() {
     mutationFn: (data: VerifyWitnessInput) => pharmacyApi.verifyWitness(orgSlug, data),
   });
 }
+
+export function useSubmitPharmacyInsuranceClaim() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: { provider_id: string; coverage_id?: string; outlet_id?: string; line_ids?: string[] };
+    }) => pharmacyApi.submitInsuranceClaim(orgSlug, id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hospital', 'prescriptions', orgSlug] }),
+  });
+}

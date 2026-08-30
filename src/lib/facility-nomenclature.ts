@@ -42,14 +42,19 @@ export type NavModuleKey =
   | 'admissions'
   | 'laboratory'
   | 'pharmacy'
-  | 'billing';
+  | 'billing'
+  | 'users'
+  | 'config';
 
 // Sprint 1-5 built the backend for these (hospital-api's Patients/Consultation/Lab/
 // Pharmacy/Billing handlers — see internal/http/router/router.go) but hospital-ui has no
 // frontend pages behind them yet (Phase 7). 'appointments' and 'admissions' have NEITHER a
 // backend handler NOR a frontend page (Sprints 6-10) — per this migration's explicit scope,
 // they stay visible-but-comingSoon at EVERY facility type, not gated by facilityModulesFor.
-const ALWAYS_VISIBLE: NavModuleKey[] = ['dashboard', 'appointments', 'admissions'];
+// 'users'/'config' (2026-08-30) are baseline tenant administration, not a clinical workflow —
+// every facility tier needs staff role management and a config view regardless of size, so
+// they're ungated by facility type too (RBAC permission alone decides visibility for these).
+const ALWAYS_VISIBLE: NavModuleKey[] = ['dashboard', 'appointments', 'admissions', 'users', 'config'];
 
 // Chemist/dispensary: walk-in OTC sale + dispense-against-external-prescription only — no
 // OPD reception/triage/consultation/lab workflow at all (hospClinicalCore vs hospChemistCore

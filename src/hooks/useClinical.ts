@@ -108,6 +108,15 @@ export function useDiagnosisCatalog() {
   });
 }
 
+export function useCreateDiagnosisEntry() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { code: string; name: string; category?: string }) => diagnosisCatalogApi.create(orgSlug, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hospital', 'diagnosis-catalog', orgSlug] }),
+  });
+}
+
 // ── Referrals ────────────────────────────────────────────────────────────────────────────
 
 export function useCreateReferral() {
@@ -116,6 +125,18 @@ export function useCreateReferral() {
   return useMutation({
     mutationFn: ({ visitId, referredTo, reason }: { visitId: string; referredTo: ReferredTo; reason?: string }) =>
       referralsApi.create(orgSlug, visitId, { referred_to: referredTo, reason }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['hospital', 'visits', orgSlug] }),
+    onSuccess: (_res, { visitId }) => {
+      qc.invalidateQueries({ queryKey: ['hospital', 'visits', orgSlug] });
+      qc.invalidateQueries({ queryKey: ['hospital', 'referrals', orgSlug, visitId] });
+    },
+  });
+}
+
+export function useReferrals(visitId?: string) {
+  const orgSlug = useOrgSlug();
+  return useQuery({
+    queryKey: ['hospital', 'referrals', orgSlug, visitId],
+    queryFn: () => referralsApi.list(orgSlug, visitId as string),
+    enabled: !!orgSlug && !!visitId,
   });
 }

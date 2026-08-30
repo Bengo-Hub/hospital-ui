@@ -21,6 +21,7 @@ import {
   HeartPulse,
   LayoutDashboard,
   Pill,
+  Settings,
   ShieldAlert,
   Stethoscope,
   UserPlus,
@@ -96,8 +97,18 @@ export const NAV_ENTRIES: NavEntry[] = [
     ],
   },
 
-  // Only one real page exists behind Laboratory today — a dropdown would be pointless, stays flat.
-  { label: 'Laboratory', icon: FlaskConical, href: '/laboratory', module: 'laboratory', permission: P.LAB_VIEW },
+  // Laboratory: the order worklist and the tenant test-catalog admin page (2026-08-30) are two
+  // distinct real pages under the same module — chained under one dropdown. Catalog requires the
+  // stricter MANAGE permission, matching that page's own in-page gate.
+  {
+    label: 'Laboratory',
+    icon: FlaskConical,
+    module: 'laboratory',
+    items: [
+      { label: 'Worklist', icon: FlaskConical, href: '/laboratory', permission: P.LAB_VIEW },
+      { label: 'Test Catalog', icon: Settings, href: '/laboratory/catalog', permission: P.LAB_MANAGE },
+    ],
+  },
 
   // Pharmacy: the prescription list and the controlled-substance audit log are two distinct real
   // pages (Phase 7) under the same dispensing module — chained under one dropdown. Controlled
@@ -115,16 +126,29 @@ export const NAV_ENTRIES: NavEntry[] = [
     ],
   },
 
-  // Only one real nav destination exists behind Billing today (the cashier "collect any
-  // department's charge" queue) — the patient-account-ledger page (/visits/[visitId]/account) has
-  // no list to link from yet, so it stays unlinked from the sidebar until a Patients/Visits list
-  // can deep-link into it. Gated on COLLECT_ANY (not the broader BILLING_VIEW) since that's the
-  // one thing this specific page is for — a department that only collects its OWN charges
-  // (collect_own) reaches billing through its own module's pages, not this queue.
-  { label: 'Billing', icon: Banknote, href: '/billing/queue', module: 'billing', permission: P.BILLING_COLLECT_ANY },
+  // Billing: the cashier "collect any department's charge" queue, plus the item-catalog admin
+  // page (2026-08-30). The patient-account-ledger page (/visits/[visitId]/account) still has no
+  // list to link from yet, so it stays unlinked from the sidebar until a Patients/Visits list can
+  // deep-link into it. Collect Charges is gated on COLLECT_ANY (not the broader BILLING_VIEW)
+  // since that's the one thing that page is for — a department that only collects its OWN
+  // charges (collect_own) reaches billing through its own module's pages, not this queue.
+  {
+    label: 'Billing',
+    icon: Banknote,
+    module: 'billing',
+    items: [
+      { label: 'Collect Charges', icon: Banknote, href: '/billing/queue', permission: P.BILLING_COLLECT_ANY },
+      { label: 'Item Catalog', icon: Settings, href: '/billing/settings', permission: P.BILLING_MANAGE_CATALOG },
+    ],
+  },
 
   // Neither backend nor frontend exist yet (Sprint 6-10) — stay flat, locked, ungated (always
   // visible per facility-nomenclature.ts's ALWAYS_VISIBLE).
   { label: 'Appointments', icon: ClipboardList, href: '/appointments', module: 'appointments', comingSoon: true },
   { label: 'Admissions & Beds', icon: Bed, href: '/admissions', module: 'admissions', comingSoon: true },
+
+  // Baseline tenant administration (2026-08-30) — available at every facility tier, gated purely
+  // by RBAC permission (module is in ALWAYS_VISIBLE, so facilityModulesFor never hides these).
+  { label: 'Staff & Roles', icon: Users, href: '/users', module: 'users', permission: P.USERS_VIEW },
+  { label: 'Config', icon: Settings, href: '/config', module: 'config', permission: P.CONFIG_VIEW },
 ];

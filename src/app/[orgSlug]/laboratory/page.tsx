@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { FlaskConical, Loader2, Plus, Zap, X } from 'lucide-react';
+import { FlaskConical, Loader2, Plus, ShieldCheck, Zap, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, Button, Badge, Input } from '@/components/ui/base';
 import { PageHeader, EmptyState, Skeleton } from '@/components/ui/page';
@@ -15,15 +15,16 @@ import {
   useCreateLabOrder,
   useActivateLabOrder,
   useEnterLabResult,
+  useSubmitLabInsuranceClaim,
 } from '@/hooks/useLab';
 import { useVisits } from '@/hooks/useClinical';
+import { InsuranceClaimModal } from '@/components/billing/insurance-claim-modal';
 import type { LabOrder, LabOrderStatus, ResultFlag } from '@/lib/api/lab';
 
 const STATUS_OPTIONS: { value: LabOrderStatus | ''; label: string }[] = [
   { value: '', label: 'All Statuses' },
   { value: 'requested', label: 'Requested' },
   { value: 'awaiting_payment', label: 'Awaiting Payment' },
-  { value: 'collected', label: 'Collected' },
   { value: 'resulted', label: 'Resulted' },
   { value: 'cancelled', label: 'Cancelled' },
 ];
@@ -31,7 +32,6 @@ const STATUS_OPTIONS: { value: LabOrderStatus | ''; label: string }[] = [
 const STATUS_BADGE: Record<LabOrderStatus, { variant: 'default' | 'success' | 'warning' | 'error' | 'outline'; label: string }> = {
   requested: { variant: 'outline', label: 'Requested' },
   awaiting_payment: { variant: 'warning', label: 'Awaiting Payment' },
-  collected: { variant: 'default', label: 'Collected' },
   resulted: { variant: 'success', label: 'Resulted' },
   cancelled: { variant: 'outline', label: 'Cancelled' },
 };
@@ -371,8 +371,10 @@ export default function LaboratoryPage() {
   const [statusFilter, setStatusFilter] = useState<LabOrderStatus | ''>('');
   const [createOpen, setCreateOpen] = useState(false);
   const [resultsOrder, setResultsOrder] = useState<LabOrder | null>(null);
+  const [insuranceOrder, setInsuranceOrder] = useState<LabOrder | null>(null);
   const { data: orders, isLoading } = useLabWorklist(statusFilter || undefined);
   const activate = useActivateLabOrder();
+  const submitInsuranceClaim = useSubmitLabInsuranceClaim();
   const { can } = useAppPermissions();
 
   const handleActivate = async (order: LabOrder) => {
@@ -455,24 +457,32 @@ export default function LaboratoryPage() {
                     <td className="px-4 py-3.5">
                       <div className="flex items-center justify-end gap-2">
                         {o.status === 'awaiting_payment' && (
-                          <Can permission="hospital.lab.change">
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              className="gap-1.5"
-                              onClick={() => handleActivate(o)}
-                              disabled={activate.isPending}
-                            >
-                              {activate.isPending ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <Zap className="h-3.5 w-3.5" />
-                              )}
-                              Activate
-                            </Button>
-                          </Can>
+                          <>
+                            <Can permission="hospital.lab.change">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="gap-1.5"
+                                onClick={() => handleActivate(o)}
+                                disabled={activate.isPending}
+                              >
+                                {activate.isPending ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Zap className="h-3.5 w-3.5" />
+                                )}
+                                Activate
+                              </Button>
+                            </Can>
+                            <Can permission={['hospital.lab.add', 'hospital.billing.collect_own', 'hospital.billing.collect_any']}>
+                              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setInsuranceOrder(o)}>
+                                <ShieldCheck className="h-3.5 w-3.5" />
+                                Bill to Insurance
+                              </Button>
+                            </Can>
+                          </>
                         )}
-                        {(o.status === 'collected' || o.status === 'resulted') && can('hospital.lab.change') && (
+                        {(o.status === 'requested' || o.status === 'resulted') && can('hospital.lab.change') && (
                           <Button size="sm" className="gap-1.5" onClick={() => setResultsOrder(o)}>
                             <FlaskConical className="h-3.5 w-3.5" />
                             {o.status === 'resulted' ? 'Edit Results' : 'Enter Results'}
@@ -490,6 +500,16 @@ export default function LaboratoryPage() {
 
       {createOpen && <NewOrderModal onClose={() => setCreateOpen(false)} />}
       {resultsOrder && <ResultsModal order={resultsOrder} onClose={() => setResultsOrder(null)} />}
+      {insuranceOrder && (
+        <InsuranceClaimModal
+          title={`Lab order — ${insuranceOrder.visit_id}`}
+          onSubmit={async (input) => {
+            const res = await submitInsuranceClaim.mutateAsync({ orderId: insuranceOrder.id, data: input });
+            return res.claim;
+          }}
+          onClose={() => setInsuranceOrder(null)}
+        />
+      )}
     </div>
   );
 }

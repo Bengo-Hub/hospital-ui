@@ -4,8 +4,9 @@
 
 import { apiClient } from './client';
 import { hospitalBase, unwrapList } from './types';
+import type { InsuranceClaimResult } from './billing';
 
-export type LabOrderStatus = 'requested' | 'awaiting_payment' | 'collected' | 'resulted' | 'cancelled';
+export type LabOrderStatus = 'requested' | 'awaiting_payment' | 'resulted' | 'cancelled';
 export type ResultFlag = 'pending' | 'normal' | 'abnormal' | 'critical';
 
 export interface LabOrder {
@@ -61,6 +62,40 @@ export interface CatalogTest {
   is_global: boolean;
 }
 
+// ── Tenant Lab Test Catalog admin CRUD (2026-08-30) ─────────────────────────────────────────
+
+export interface LabTestCatalogEntry {
+  id: string;
+  code: string;
+  name: string;
+  specimen_type?: string;
+  reference_range?: string;
+  unit?: string;
+  turnaround_hours?: number;
+  price: number;
+  is_active: boolean;
+}
+
+export interface CreateLabTestEntryInput {
+  code: string;
+  name: string;
+  specimen_type?: string;
+  reference_range?: string;
+  unit?: string;
+  turnaround_hours?: number;
+  price?: number;
+}
+
+export interface UpdateLabTestEntryInput {
+  name?: string;
+  specimen_type?: string;
+  reference_range?: string;
+  unit?: string;
+  turnaround_hours?: number;
+  price?: number;
+  is_active?: boolean;
+}
+
 export const labApi = {
   createOrder: (orgSlug: string, data: CreateLabOrderInput) =>
     apiClient.post<LabOrder>(`${hospitalBase(orgSlug)}/lab-orders`, data),
@@ -78,4 +113,24 @@ export const labApi = {
     const res = await apiClient.get<{ data: CatalogTest[] }>(`${hospitalBase(orgSlug)}/lab-test-catalog`);
     return unwrapList(res);
   },
+  submitInsuranceClaim: (
+    orgSlug: string,
+    orderId: string,
+    data: { provider_id: string; coverage_id?: string; outlet_id?: string }
+  ) =>
+    apiClient.post<{ order: LabOrder; claim: InsuranceClaimResult }>(
+      `${hospitalBase(orgSlug)}/lab-orders/${orderId}/insurance-claim`,
+      data
+    ),
+
+  listTenantCatalogEntries: (orgSlug: string, includeInactive = false) =>
+    apiClient
+      .get<{ data: LabTestCatalogEntry[] }>(`${hospitalBase(orgSlug)}/lab-test-catalog/entries`, includeInactive ? { include_inactive: '1' } : undefined)
+      .then(unwrapList),
+  createCatalogEntry: (orgSlug: string, data: CreateLabTestEntryInput) =>
+    apiClient.post<LabTestCatalogEntry>(`${hospitalBase(orgSlug)}/lab-test-catalog/entries`, data),
+  updateCatalogEntry: (orgSlug: string, entryId: string, data: UpdateLabTestEntryInput) =>
+    apiClient.put<LabTestCatalogEntry>(`${hospitalBase(orgSlug)}/lab-test-catalog/entries/${entryId}`, data),
+  deactivateCatalogEntry: (orgSlug: string, entryId: string) =>
+    apiClient.post<LabTestCatalogEntry>(`${hospitalBase(orgSlug)}/lab-test-catalog/entries/${entryId}/deactivate`, {}),
 };

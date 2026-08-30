@@ -4,6 +4,7 @@
 
 import { apiClient } from './client';
 import { hospitalBase, unwrapList } from './types';
+import type { InsuranceClaimResult } from './billing';
 
 export type PrescriptionStatus =
   | 'pending' | 'pharmacist_review' | 'flagged' | 'approved' | 'locked'
@@ -160,4 +161,13 @@ export const pharmacyApi = {
     const res = await apiClient.get<{ data: ControlledSubstanceLog[] }>(`${hospitalBase(orgSlug)}/pharmacy/controlled-substances`);
     return unwrapList(res);
   },
+  submitInsuranceClaim: (
+    orgSlug: string,
+    id: string,
+    data: { provider_id: string; coverage_id?: string; outlet_id?: string; line_ids?: string[] }
+  ) =>
+    apiClient.post<{ prescription: Prescription; claim: InsuranceClaimResult }>(
+      `${hospitalBase(orgSlug)}/prescriptions/${id}/insurance-claim`,
+      data
+    ),
 };

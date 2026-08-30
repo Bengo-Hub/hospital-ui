@@ -201,4 +201,6 @@ export interface Referral {
 export const referralsApi = {
   create: (orgSlug: string, visitId: string, data: { referred_to: ReferredTo; reason?: string }) =>
     apiClient.post<Referral>(`${hospitalBase(orgSlug)}/visits/${visitId}/refer`, data),
+  list: (orgSlug: string, visitId: string) =>
+    apiClient.get<{ data: Referral[] }>(`${hospitalBase(orgSlug)}/visits/${visitId}/referrals`).then(unwrapList),
 };

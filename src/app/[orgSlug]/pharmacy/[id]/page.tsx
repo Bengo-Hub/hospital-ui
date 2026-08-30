@@ -12,6 +12,7 @@ import {
   Lock,
   Pill,
   ShieldAlert,
+  ShieldCheck,
   XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -27,7 +28,9 @@ import {
   useRejectPrescription,
   useCancelPrescription,
   useDispensePrescription,
+  useSubmitPharmacyInsuranceClaim,
 } from '@/hooks/usePharmacy';
+import { InsuranceClaimModal } from '@/components/billing/insurance-claim-modal';
 import type { DispenseLineInput, PrescriptionStatus } from '@/lib/api/pharmacy';
 import { WitnessConfirmForm, type ConfirmedWitness } from './witness-confirm-form';
 
@@ -77,8 +80,10 @@ export default function PrescriptionDetailPage() {
   const reject = useRejectPrescription();
   const cancelRx = useCancelPrescription();
   const dispense = useDispensePrescription();
+  const submitInsuranceClaim = useSubmitPharmacyInsuranceClaim();
 
   const [overrideReason, setOverrideReason] = useState('');
+  const [showInsurance, setShowInsurance] = useState(false);
   const [showReject, setShowReject] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [showCancel, setShowCancel] = useState(false);
@@ -228,6 +233,10 @@ export default function PrescriptionDetailPage() {
   const canLock = rx.status === 'approved';
   const canDispense = rx.status === 'approved' || rx.status === 'locked' || rx.status === 'partially_dispensed';
   const canRejectOrCancel = !TERMINAL_STATUSES.includes(rx.status) && rx.status !== 'partially_dispensed';
+  // Insurance settles a dispensed line's charge instead of cash — only makes sense once at
+  // least one line has actually been dispensed (mirrors pharmacy.Service.SubmitInsuranceClaim's
+  // own precondition on the server side).
+  const canBillInsurance = rx.status === 'dispensed' || rx.status === 'partially_dispensed';
   // Per hospital-api's contract, an override_reason is required for BOTH the 'flagged' status (a
   // minor/moderate drug-interaction/allergy finding) and the stricter 'pharmacist_review' status
   // (a major/contraindicated interaction) — pharmacist_review is the more serious of the two, so
@@ -296,6 +305,14 @@ export default function PrescriptionDetailPage() {
               <Button variant="outline" className="gap-2" onClick={() => setShowCancel((v) => !v)}>
                 <XCircle className="h-4 w-4" />
                 Cancel Rx
+              </Button>
+            </Can>
+          )}
+          {canBillInsurance && (
+            <Can permission={['hospital.billing.collect_own', 'hospital.billing.collect_any']}>
+              <Button variant="outline" className="gap-2" onClick={() => setShowInsurance(true)}>
+                <ShieldCheck className="h-4 w-4" />
+                Bill to Insurance
               </Button>
             </Can>
           )}
@@ -575,6 +592,16 @@ export default function PrescriptionDetailPage() {
           </div>
         )}
       </Card>
+      {showInsurance && rx && (
+        <InsuranceClaimModal
+          title={`Prescription ${rx.prescription_number}`}
+          onSubmit={async (input) => {
+            const res = await submitInsuranceClaim.mutateAsync({ id: rx.id, data: input });
+            return res.claim;
+          }}
+          onClose={() => setShowInsurance(false)}
+        />
+      )}
     </div>
   );
 }

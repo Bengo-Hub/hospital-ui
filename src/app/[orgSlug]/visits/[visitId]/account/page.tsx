@@ -2,14 +2,24 @@
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { AlertOctagon, Banknote, CreditCard, Loader2, ShieldAlert, Wallet, X } from 'lucide-react';
+import { AlertOctagon, Banknote, CreditCard, Loader2, ShieldAlert, ShieldCheck, Wallet, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, Button, Badge, Input } from '@/components/ui/base';
 import { PageHeader, StatCard, EmptyState, Skeleton } from '@/components/ui/page';
 import { Can } from '@/components/auth/can';
 import { apiErrorMessage } from '@/lib/api/error-message';
 import { useFacilityType } from '@/lib/facility-nomenclature';
-import { useAccountByVisit, usePendingCharges, useCollectCharge, useSettleAccount, useOverrideSettlement } from '@/hooks/useBilling';
+import {
+  useAccountByVisit,
+  usePendingCharges,
+  useCollectCharge,
+  useSettleAccount,
+  useOverrideSettlement,
+  useSubmitVisitInsuranceClaim,
+  useNextOfKin,
+  useCreateNextOfKin,
+} from '@/hooks/useBilling';
+import { InsuranceClaimModal } from '@/components/billing/insurance-claim-modal';
 import type { BillableCharge, ChargeStatus, PatientAccount, PaymentMethod } from '@/lib/api/billing';
 
 // This page is deliberately visit-scoped (matches useAccountByVisit's contract, which takes a
@@ -23,6 +33,7 @@ const CHARGE_STATUS_BADGE: Record<ChargeStatus, 'default' | 'success' | 'warning
   pending: 'warning',
   invoiced: 'default',
   paid: 'success',
+  exempted: 'success',
   waived: 'outline',
   written_off: 'outline',
 };
@@ -132,9 +143,34 @@ function CollectModal({ charge, onClose }: { charge: BillableCharge; onClose: ()
 
 function SettleModal({ account, onClose }: { account: PatientAccount; onClose: () => void }) {
   const settle = useSettleAccount();
+  const { data: kin = [], isLoading: kinLoading } = useNextOfKin(account.patient_id);
+  const createKin = useCreateNextOfKin();
   const [method, setMethod] = useState<PaymentMethod>('mpesa');
   const [phone, setPhone] = useState('');
   const [nextOfKinId, setNextOfKinId] = useState('');
+  const [addingKin, setAddingKin] = useState(false);
+  const [kinName, setKinName] = useState('');
+  const [kinPhone, setKinPhone] = useState('');
+  const [kinRelationship, setKinRelationship] = useState('');
+
+  const handleAddKin = async () => {
+    if (!kinName.trim()) {
+      toast.error('Enter the next-of-kin name');
+      return;
+    }
+    try {
+      const created = await createKin.mutateAsync({
+        patientId: account.patient_id,
+        data: { name: kinName.trim(), phone: kinPhone.trim() || undefined, relationship: kinRelationship.trim() || undefined },
+      });
+      setNextOfKinId(created.id);
+      setAddingKin(false);
+      setKinName(''); setKinPhone(''); setKinRelationship('');
+      toast.success('Next-of-kin added');
+    } catch (e) {
+      toast.error(await apiErrorMessage(e, 'Failed to add next-of-kin'));
+    }
+  };
 
   const handleSubmit = async () => {
     if (method === 'mpesa' && !phone.trim()) {
@@ -147,7 +183,7 @@ function SettleModal({ account, onClose }: { account: PatientAccount; onClose: (
         data: {
           payment_method: method,
           phone_number: method === 'mpesa' ? phone.trim() : undefined,
-          next_of_kin_id: nextOfKinId.trim() || undefined,
+          next_of_kin_id: nextOfKinId || undefined,
         },
       });
       toast.success('Account settled');
@@ -198,8 +234,38 @@ function SettleModal({ account, onClose }: { account: PatientAccount; onClose: (
             </div>
           )}
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Next of Kin ID (if they are settling)</label>
-            <Input value={nextOfKinId} onChange={(e) => setNextOfKinId(e.target.value)} placeholder="Optional" />
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Next of Kin (if they are settling)</label>
+            {!addingKin ? (
+              <div className="flex items-center gap-2">
+                <select
+                  value={nextOfKinId}
+                  disabled={kinLoading}
+                  onChange={(e) => setNextOfKinId(e.target.value)}
+                  className="flex-1 bg-background border border-border rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60"
+                >
+                  <option value="">{kinLoading ? 'Loading…' : 'None recorded'}</option>
+                  {kin.map((k) => (
+                    <option key={k.id} value={k.id}>{k.name}{k.relationship ? ` (${k.relationship})` : ''}</option>
+                  ))}
+                </select>
+                <Button type="button" variant="outline" size="sm" onClick={() => setAddingKin(true)}>Add New</Button>
+              </div>
+            ) : (
+              <div className="space-y-2 rounded-xl border border-border p-3">
+                <Input value={kinName} onChange={(e) => setKinName(e.target.value)} placeholder="Full name *" />
+                <Input value={kinPhone} onChange={(e) => setKinPhone(e.target.value)} placeholder="Phone (optional)" />
+                <Input value={kinRelationship} onChange={(e) => setKinRelationship(e.target.value)} placeholder="Relationship (optional)" />
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => setAddingKin(false)} disabled={createKin.isPending}>
+                    Cancel
+                  </Button>
+                  <Button type="button" size="sm" className="flex-1 gap-1.5" onClick={handleAddKin} disabled={createKin.isPending}>
+                    {createKin.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    Save
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex gap-3 px-6 pb-6">
@@ -341,8 +407,10 @@ function ChemistCheckout() {
 function PatientAccountLedger({ visitId, showSettlementActions }: { visitId: string; showSettlementActions: boolean }) {
   const { data, isLoading } = useAccountByVisit(visitId);
   const [collectCharge, setCollectCharge] = useState<BillableCharge | null>(null);
+  const [insuranceCharge, setInsuranceCharge] = useState<BillableCharge | null>(null);
   const [settleOpen, setSettleOpen] = useState(false);
   const [overrideOpen, setOverrideOpen] = useState(false);
+  const submitInsuranceClaim = useSubmitVisitInsuranceClaim();
 
   if (isLoading) {
     return (
@@ -440,12 +508,20 @@ function PatientAccountLedger({ visitId, showSettlementActions }: { visitId: str
                     </td>
                     <td className="px-4 py-3.5 text-right">
                       {(c.status === 'pending' || c.status === 'invoiced') && (
-                        <Can permission="hospital.billing.collect_own">
-                          <Button size="sm" className="gap-1.5" onClick={() => setCollectCharge(c)}>
-                            <CreditCard className="h-3.5 w-3.5" />
-                            Collect Now
-                          </Button>
-                        </Can>
+                        <div className="flex items-center justify-end gap-2">
+                          <Can permission="hospital.billing.collect_own">
+                            <Button size="sm" className="gap-1.5" onClick={() => setCollectCharge(c)}>
+                              <CreditCard className="h-3.5 w-3.5" />
+                              Collect Now
+                            </Button>
+                          </Can>
+                          <Can permission={['hospital.billing.collect_own', 'hospital.billing.collect_any']}>
+                            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setInsuranceCharge(c)}>
+                              <ShieldCheck className="h-3.5 w-3.5" />
+                              Insurance
+                            </Button>
+                          </Can>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -459,6 +535,16 @@ function PatientAccountLedger({ visitId, showSettlementActions }: { visitId: str
       {collectCharge && <CollectModal charge={collectCharge} onClose={() => setCollectCharge(null)} />}
       {settleOpen && <SettleModal account={account} onClose={() => setSettleOpen(false)} />}
       {overrideOpen && <OverrideModal account={account} onClose={() => setOverrideOpen(false)} />}
+      {insuranceCharge && (
+        <InsuranceClaimModal
+          title={insuranceCharge.description}
+          amountLabel={insuranceCharge.amount.toFixed(2)}
+          onSubmit={(input) =>
+            submitInsuranceClaim.mutateAsync({ visitId, data: { ...input, charge_ids: [insuranceCharge.id] } })
+          }
+          onClose={() => setInsuranceCharge(null)}
+        />
+      )}
     </div>
   );
 }

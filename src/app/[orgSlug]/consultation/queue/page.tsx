@@ -30,7 +30,7 @@ import { Card } from '@/components/ui/base';
 import { Can } from '@/components/auth/can';
 import { VisitStatusBadge } from '@/components/clinical/visit-status-badge';
 import {
-  useVisits, usePatient, useRecordExamination, useDiagnosisCatalog, useCreateReferral,
+  useVisits, usePatient, useRecordExamination, useDiagnosisCatalog, useCreateDiagnosisEntry, useCreateReferral, useReferrals,
 } from '@/hooks/useClinical';
 import { apiErrorMessage } from '@/lib/api/error-message';
 import type { PatientVisit, QueueType, ReferredTo } from '@/lib/api/clinical';
@@ -50,6 +50,8 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
   const { data: catalog } = useDiagnosisCatalog();
   const recordExamination = useRecordExamination();
   const createReferral = useCreateReferral();
+  const createDiagnosisEntry = useCreateDiagnosisEntry();
+  const { data: referrals = [] } = useReferrals(visit.id);
 
   const [queueType, setQueueType] = useState<QueueType>('doctor');
   const [chiefComplaint, setChiefComplaint] = useState(visit.chief_complaint ?? '');
@@ -131,6 +133,17 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
               <p className="font-semibold text-emerald-700 dark:text-emerald-400">Diagnosis recorded</p>
               <p className="text-muted-foreground mt-0.5">{recordedDiagnosis}</p>
             </div>
+            {referrals.length > 0 && (
+              <div className="rounded-xl border border-border p-3 space-y-1.5">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Referrals on this visit</p>
+                {referrals.map((ref) => (
+                  <div key={ref.id} className="flex items-center justify-between text-xs">
+                    <span className="capitalize font-medium">{ref.referred_to.replace('_', ' ')}</span>
+                    <span className="text-muted-foreground">{ref.status}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div>
               <label className={labelCls}>Referral reason (optional)</label>
               <input
@@ -191,12 +204,35 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
               </div>
               <div>
                 <label className={labelCls}>Or enter diagnosis manually</label>
-                <input
-                  value={manualDiagnosis}
-                  onChange={(e) => setManualDiagnosis(e.target.value)}
-                  className={inputCls}
-                  placeholder="Free-text diagnosis if not in the catalogue…"
-                />
+                <div className="flex gap-2">
+                  <input
+                    value={manualDiagnosis}
+                    onChange={(e) => setManualDiagnosis(e.target.value)}
+                    className={inputCls}
+                    placeholder="Free-text diagnosis if not in the catalogue…"
+                  />
+                  <Can permission="hospital.consultation.manage">
+                    <button
+                      type="button"
+                      disabled={!manualDiagnosis.trim() || createDiagnosisEntry.isPending}
+                      onClick={async () => {
+                        try {
+                          await createDiagnosisEntry.mutateAsync({
+                            code: manualDiagnosis.trim().toUpperCase().replace(/\s+/g, '_').slice(0, 40),
+                            name: manualDiagnosis.trim(),
+                          });
+                          toast.success('Added to diagnosis catalogue for future use');
+                        } catch (e) {
+                          toast.error(await apiErrorMessage(e, 'Failed to add to catalogue'));
+                        }
+                      }}
+                      className="shrink-0 px-3 rounded-xl border border-border text-xs font-semibold hover:bg-accent transition-colors disabled:opacity-40"
+                      title="Add this diagnosis to the tenant catalogue so it appears in the search above next time"
+                    >
+                      + Catalog
+                    </button>
+                  </Can>
+                </div>
                 <p className="text-[11px] text-muted-foreground mt-1">
                   If filled in, this overrides the catalogue selection above.
                 </p>
