@@ -2,7 +2,7 @@
 
 **Service:** hospital-ui
 **Last updated:** 2026-08-30
-**Status:** Sprints 0-5 shipped, live in production, matching hospital-api's own parity. Real domain pages exist for reception/triage, consultation, laboratory, pharmacy/dispensing, and billing/insurance, plus a Staff & Roles / Config admin surface — all gated by a real RBAC system (`Can`, `useAppPermissions`, permission-filtered sidebar). See `docs/sprints/` for what shipped in each sprint.
+**Status:** Sprints 0-5 shipped, live in production, matching hospital-api's own parity. Real domain pages exist for reception/triage, consultation, laboratory, pharmacy/dispensing, and billing/insurance, plus a Staff & Roles / Config admin surface — all gated by a real RBAC system (`Can`, `useAppPermissions`, permission-filtered sidebar). See `docs/sprints/` for what shipped in each sprint. **2026-08-30:** the Staff & Roles admin surface was rebuilt into three pages — `/users` (now on shared-ui-lib's `DataTable`, plus an Invite Staff flow and deactivate/reactivate actions), `/roles` (a new global-role customization + custom-role permission-matrix editor), and `/audit-log` (a new view-only RBAC activity log) — matching hospital-api's own user-management rebuild the same day. This is new capability beyond the original Sprint 0-10 roadmap below, not part of any numbered sprint.
 
 ---
 
