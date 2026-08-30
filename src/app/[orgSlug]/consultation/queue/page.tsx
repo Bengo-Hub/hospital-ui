@@ -29,6 +29,7 @@ import { PageHeader, EmptyState, Skeleton } from '@/components/ui/page';
 import { Card } from '@/components/ui/base';
 import { Can } from '@/components/auth/can';
 import { VisitStatusBadge } from '@/components/clinical/visit-status-badge';
+import { VisitChargesPanel } from '@/components/billing/visit-charges-panel';
 import {
   useVisits, usePatient, useRecordExamination, useDiagnosisCatalog, useCreateDiagnosisEntry, useCreateReferral, useReferrals,
 } from '@/hooks/useClinical';
@@ -126,6 +127,8 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
             <X className="h-4 w-4" />
           </button>
         </div>
+
+        <VisitChargesPanel visitId={visit.id} className="mx-6 mt-4" />
 
         {recordedDiagnosis ? (
           <div className="p-6 space-y-4">

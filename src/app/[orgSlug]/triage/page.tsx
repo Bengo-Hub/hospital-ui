@@ -16,6 +16,7 @@ import { PageHeader, EmptyState, Skeleton } from '@/components/ui/page';
 import { Card } from '@/components/ui/base';
 import { Can } from '@/components/auth/can';
 import { VisitStatusBadge } from '@/components/clinical/visit-status-badge';
+import { VisitChargesPanel } from '@/components/billing/visit-charges-panel';
 import { useVisits, usePatient, useRecordTriage } from '@/hooks/useClinical';
 import { apiErrorMessage } from '@/lib/api/error-message';
 import type { PatientVisit } from '@/lib/api/clinical';
@@ -123,6 +124,7 @@ function TriageModal({ visit, onClose }: { visit: PatientVisit; onClose: () => v
             <label className={labelCls}>Notes</label>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className={`${inputCls} resize-none`} />
           </div>
+          <VisitChargesPanel visitId={visit.id} />
         </div>
         <div className="flex gap-3 px-6 pb-6">
           <button onClick={onClose} className="flex-1 min-h-11 rounded-xl border border-border text-sm font-semibold hover:bg-accent transition-colors">

@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Loader2, Pencil, UserSquare, Wallet, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, Loader2, Pencil, UserSquare, Wallet, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, Button, Badge, Input } from '@/components/ui/base';
 import { PageHeader, EmptyState, Skeleton } from '@/components/ui/page';
 import { Can } from '@/components/auth/can';
 import { VisitStatusBadge } from '@/components/clinical/visit-status-badge';
+import { VisitChargesPanel } from '@/components/billing/visit-charges-panel';
 import { apiErrorMessage } from '@/lib/api/error-message';
 import { usePatient, useUpdatePatient, useVisitsByPatient } from '@/hooks/useClinical';
 import type { Patient } from '@/lib/api/clinical';
@@ -124,6 +125,7 @@ export default function PatientDetailPage() {
   const { data: patient, isLoading } = usePatient(patientId);
   const { data: visits, isLoading: visitsLoading } = useVisitsByPatient(patientId);
   const [editOpen, setEditOpen] = useState(false);
+  const [expandedVisitId, setExpandedVisitId] = useState<string | null>(null);
 
   if (isLoading || !patient) {
     return (
@@ -205,7 +207,8 @@ export default function PatientDetailPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {visits.map((v) => (
-                  <tr key={v.id} className="hover:bg-accent/20 transition-colors">
+                  <Fragment key={v.id}>
+                  <tr className="hover:bg-accent/20 transition-colors">
                     <td className="px-4 py-3.5 font-mono text-xs">{v.visit_number}</td>
                     <td className="px-4 py-3.5 text-muted-foreground text-xs">{v.visit_type}</td>
                     <td className="px-4 py-3.5"><VisitStatusBadge status={v.status} /></td>
@@ -213,15 +216,33 @@ export default function PatientDetailPage() {
                       {new Date(v.checked_in_at).toLocaleString()}
                     </td>
                     <td className="px-4 py-3.5 text-right">
-                      <Link
-                        href={`/${orgSlug}/visits/${v.id}/account`}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
-                      >
-                        <Wallet className="h-3.5 w-3.5" />
-                        View Account
-                      </Link>
+                      <div className="flex items-center justify-end gap-3">
+                        <Link
+                          href={`/${orgSlug}/visits/${v.id}/account`}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+                        >
+                          <Wallet className="h-3.5 w-3.5" />
+                          View Account
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => setExpandedVisitId((prev) => (prev === v.id ? null : v.id))}
+                          className="h-7 w-7 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
+                          title="Collect this visit's pending charges"
+                        >
+                          {expandedVisitId === v.id ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                        </button>
+                      </div>
                     </td>
                   </tr>
+                  {expandedVisitId === v.id && (
+                    <tr>
+                      <td colSpan={5} className="px-4 pb-4 bg-accent/10">
+                        <VisitChargesPanel visitId={v.id} />
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

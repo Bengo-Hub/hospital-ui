@@ -36,6 +36,7 @@ import {
   useRecheckInteractions,
 } from '@/hooks/usePharmacy';
 import { InsuranceClaimModal } from '@/components/billing/insurance-claim-modal';
+import { VisitChargesPanel } from '@/components/billing/visit-charges-panel';
 import { pharmacyApi } from '@/lib/api/pharmacy';
 import type { DispenseLineInput, PrescriptionStatus, InteractionCheck } from '@/lib/api/pharmacy';
 import { WitnessConfirmForm, type ConfirmedWitness } from './witness-confirm-form';
@@ -690,6 +691,9 @@ export default function PrescriptionDetailPage() {
           </div>
         )}
       </Card>
+
+      {rx.visit_id && <VisitChargesPanel visitId={rx.visit_id} className="mt-5" />}
+
       {showInsurance && rx && (
         <InsuranceClaimModal
           title={`Prescription ${rx.prescription_number}`}

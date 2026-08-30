@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Banknote, FlaskConical, Loader2, Plus, ShieldCheck, XCircle, Zap, X } from 'lucide-react';
+import { Banknote, ChevronDown, ChevronUp, FlaskConical, Loader2, Plus, ShieldCheck, XCircle, Zap, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, Button, Badge, Input } from '@/components/ui/base';
 import { PageHeader, EmptyState, Skeleton } from '@/components/ui/page';
@@ -23,6 +23,7 @@ import {
 } from '@/hooks/useLab';
 import { useVisits } from '@/hooks/useClinical';
 import { InsuranceClaimModal } from '@/components/billing/insurance-claim-modal';
+import { VisitChargesPanel } from '@/components/billing/visit-charges-panel';
 import type { LabOrder, LabOrderStatus, ResultFlag } from '@/lib/api/lab';
 
 const STATUS_OPTIONS: { value: LabOrderStatus | ''; label: string }[] = [
@@ -378,6 +379,7 @@ export default function LaboratoryPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [resultsOrder, setResultsOrder] = useState<LabOrder | null>(null);
   const [insuranceOrder, setInsuranceOrder] = useState<LabOrder | null>(null);
+  const [expandedVisitId, setExpandedVisitId] = useState<string | null>(null);
   const { data: orders, isLoading } = useLabWorklist(statusFilter || undefined);
   const activate = useActivateLabOrder();
   const cancelOrder = useCancelLabOrder();
@@ -465,7 +467,8 @@ export default function LaboratoryPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {rows.map((o) => (
-                  <tr key={o.id} className="hover:bg-accent/20 transition-colors">
+                  <Fragment key={o.id}>
+                  <tr className="hover:bg-accent/20 transition-colors">
                     <td className="px-4 py-3.5 font-mono text-xs">{o.visit_id}</td>
                     <td className="px-4 py-3.5">
                       <LabStatusBadge status={o.status} />
@@ -529,9 +532,25 @@ export default function LaboratoryPage() {
                         >
                           <Banknote className="h-3.5 w-3.5" />
                         </Link>
+                        <button
+                          type="button"
+                          onClick={() => setExpandedVisitId((prev) => (prev === o.visit_id ? null : o.visit_id))}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:bg-accent transition-colors"
+                          title="Collect this visit's pending charges"
+                        >
+                          {expandedVisitId === o.visit_id ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                        </button>
                       </div>
                     </td>
                   </tr>
+                  {expandedVisitId === o.visit_id && (
+                    <tr>
+                      <td colSpan={5} className="px-4 pb-4 bg-accent/10">
+                        <VisitChargesPanel visitId={o.visit_id} />
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
