@@ -563,6 +563,7 @@ export default function LaboratoryPage() {
       {insuranceOrder && (
         <InsuranceClaimModal
           title={`Lab order — ${insuranceOrder.visit_id}`}
+          visitId={insuranceOrder.visit_id}
           onSubmit={async (input) => {
             const res = await submitInsuranceClaim.mutateAsync({ orderId: insuranceOrder.id, data: input });
             return res.claim;

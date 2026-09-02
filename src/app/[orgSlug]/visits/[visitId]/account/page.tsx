@@ -448,6 +448,7 @@ function PatientAccountLedger({ visitId, showSettlementActions }: { visitId: str
         <InsuranceClaimModal
           title={insuranceCharge.description}
           amountLabel={insuranceCharge.amount.toFixed(2)}
+          visitId={visitId}
           onSubmit={(input) =>
             submitInsuranceClaim.mutateAsync({ visitId, data: { ...input, charge_ids: [insuranceCharge.id] } })
           }

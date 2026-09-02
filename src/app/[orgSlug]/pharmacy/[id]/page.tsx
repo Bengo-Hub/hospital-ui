@@ -705,6 +705,7 @@ export default function PrescriptionDetailPage() {
       {showInsurance && rx && (
         <InsuranceClaimModal
           title={`Prescription ${rx.prescription_number}`}
+          visitId={rx.visit_id}
           onSubmit={async (input) => {
             const res = await submitInsuranceClaim.mutateAsync({ id: rx.id, data: input });
             return res.claim;
