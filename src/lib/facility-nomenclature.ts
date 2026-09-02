@@ -97,14 +97,22 @@ export function facilityModulesFor(facilityType: FacilityType): NavModuleKey[] {
 /**
  * Resolves the tenant's facility type from the same subscription mechanism as
  * `useSubscription`/`SubscriptionGate` — no separate fetch. Defaults to 'hospital' (the full
- * superset of built modules) for: platform owner / exempt tenants (always fully entitled),
- * a non-Afya or not-yet-resolved plan, and while the subscription lookup is still loading —
- * consistent with useSubscription's own "fail open" philosophy (a slow/failed lookup must
- * never wrongly COLLAPSE a real hospital tenant's sidebar; briefly over-showing modules for an
- * still-resolving chemist tenant is the safer direction of error).
+ * superset of built modules) for: a non-Afya or not-yet-resolved plan, and while the
+ * subscription lookup is still loading — consistent with useSubscription's own "fail open"
+ * philosophy (a slow/failed lookup must never wrongly COLLAPSE a real hospital tenant's
+ * sidebar; briefly over-showing modules for a still-resolving chemist tenant is the safer
+ * direction of error).
+ *
+ * Deliberately does NOT special-case `isPlatformOwner`/`isExempt` (fixed 2026-09-02 — see
+ * `hospital-chemist-pharmacy-remediation-2026-09-02.md`'s Phase K): those bypass FEATURE/
+ * LICENSING gating only (`hasFeature`/`needsSubscription`/`isActive` in useSubscription), a
+ * presentation concern like "which facility tier's nav to show" is not the same thing —
+ * conflating them meant a platform owner could never see a real Chemist/Clinic/Facility
+ * tenant's actual nav, always collapsing to the richest tier regardless of what's really
+ * assigned. Matches pos-ui/inventory-ui's own convention: platform-owner status bypasses
+ * per-module visibility toggles, never which outlet/tenant's real data is shown.
  */
 export function useFacilityType(): FacilityType {
-  const { info, isPlatformOwner, isExempt } = useSubscription();
-  if (isPlatformOwner || isExempt) return 'hospital';
+  const { info } = useSubscription();
   return isFacilityType(info?.facilityType) ? info.facilityType : 'hospital';
 }

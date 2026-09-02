@@ -38,15 +38,24 @@ export function useSubscription() {
     if (subscriptionInfo !== undefined) return;
     setSubscriptionInfo(null);
 
-    if (!tenantId || isPlatformOwner) {
-      // Platform owner / no-tenant: fully entitled, default to the top facility tier so the
-      // adaptive sidebar (facility-nomenclature.ts) shows every built module rather than
-      // collapsing to a facility_type it never actually resolved.
+    if (!tenantId) {
+      // Genuinely no tenant context (e.g. the public marketing pages) — nothing real to look
+      // up, keep the synthetic fully-entitled default.
       const platformRaw = { plan: 'ENTERPRISE', status: 'ACTIVE', features: [], limits: {}, facilityType: 'hospital' };
       setSubscriptionInfo({ status: 'active', planCode: 'enterprise', planName: 'Enterprise', features: [], limits: {}, facilityType: 'hospital' } as unknown as Record<string, unknown>);
       useSubscriptionStore.getState().setFromRaw(platformRaw, tenantSlug ?? '');
       return;
     }
+    // Platform owner viewing a real tenant: feature/subscription GATING is already fully
+    // bypassed below via the separate `isExempt` boolean (hasFeature/needsSubscription/isActive
+    // all read `isExempt` directly, never `info`), so fetching real data here can never re-
+    // introduce a restriction. facilityType is a PRESENTATION concern, not a licensing one —
+    // hardcoding it to 'hospital' here (the previous behaviour) meant a platform owner could
+    // never see a lower-tier tenant's real adaptive nav, which is exactly the class of bug
+    // pos-ui/inventory-ui avoid by always resolving nav from the real outlet/tenant regardless
+    // of platform-owner status. So platform owners now take the SAME real-lookup path below as
+    // everyone else; only the lookup-failure fallback still synthesizes the old enterprise/
+    // hospital default, to fail open exactly as before if the API call itself is unreachable.
 
     // A FAILED lookup (network/5xx/timeout) is NOT the same as "no subscription".
     // fetchSubscriptionInfo returns null ONLY on failure — never collapse that to
@@ -98,7 +107,7 @@ export function useSubscription() {
         );
       })
       .catch(() => handleLookupFailure());
-  }, [status, session?.accessToken, user, subscriptionInfo, setSubscriptionInfo, tenantId, tenantSlug, isPlatformOwner]);
+  }, [status, session?.accessToken, user, subscriptionInfo, setSubscriptionInfo, tenantId, tenantSlug]);
 
   // Re-fetch when tab becomes visible (user returned from renewal/billing tab)
   const lastHiddenAt = useRef<number | null>(null);
