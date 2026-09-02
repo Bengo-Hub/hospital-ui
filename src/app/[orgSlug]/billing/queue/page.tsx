@@ -19,7 +19,7 @@ const DEPARTMENT_OPTIONS = [
   { value: 'lab', label: 'Laboratory' },
   { value: 'pharmacy', label: 'Pharmacy' },
   { value: 'theatre', label: 'Theatre' },
-  { value: 'inpatient', label: 'Inpatient' },
+  { value: 'inpatient', label: 'IPD (Inpatient)' },
   { value: 'mortuary', label: 'Mortuary' },
 ];
 

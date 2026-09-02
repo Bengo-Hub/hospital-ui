@@ -2,10 +2,10 @@
 
 // Sprint 1 — Triage queue: visits with status=registered waiting for vitals capture. Ports the
 // UX/interaction pattern of pos-ui's `[orgSlug]/triage/page.tsx` (queue table + vitals-capture
-// modal, toast-on-success/error) onto hospital-ui's own stack. hospital-ui has no dedicated
-// `/triage` nav entry yet (facility-nomenclature.ts unifies reception/triage/consultation under
-// the single "Patients" sidebar item) so this page is reached via the banner link on
-// `/[orgSlug]/patients`, not the sidebar.
+// modal, toast-on-success/error) onto hospital-ui's own stack. Reachable via the sidebar's "OPD"
+// group (nav-config.ts — reception/triage/consultation are chained under that one dropdown,
+// labeled with the real hospital term per the 2026-09-02 sidebar-naming fix) and via the banner
+// link on `/[orgSlug]/patients`.
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';

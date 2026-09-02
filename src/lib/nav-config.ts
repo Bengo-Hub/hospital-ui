@@ -87,15 +87,19 @@ export function isNavGroup(entry: NavEntry): entry is NavGroup {
 export const NAV_ENTRIES: NavEntry[] = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', module: 'dashboard' },
 
-  // Patients: registration/search, triage vitals capture, and the doctor's consultation queue are
-  // three distinct real pages (Phase 7) that all belong to the same OPD reception → clinician
-  // workflow — chained under one dropdown instead of three separate top-level items.
+  // OPD (Outpatient Department): registration/search, triage vitals capture, and the doctor's
+  // consultation queue are three distinct real pages that all belong to the same reception →
+  // clinician workflow — chained under one dropdown labeled with the real hospital term this
+  // codebase's own schema already uses (PatientVisit.visit_type: "OPD"|"IPD") rather than the
+  // generic "Patients", which a clinical user couldn't actually locate the OPD workflow under
+  // (real user-reported gap, 2026-09-02 — the terminology existed in the data model and every
+  // doc, but never surfaced in the sidebar itself).
   {
-    label: 'Patients',
+    label: 'OPD',
     icon: Users,
     module: 'patients',
     items: [
-      { label: 'Register / Search', icon: UserPlus, href: '/patients', permission: P.RECORDS_VIEW },
+      { label: 'Patient Registration', icon: UserPlus, href: '/patients', permission: P.RECORDS_VIEW },
       { label: 'Triage', icon: HeartPulse, href: '/triage', permission: P.TRIAGE_VIEW },
       { label: 'Consultation Queue', icon: Stethoscope, href: '/consultation/queue', permission: P.CONSULTATION_VIEW },
     ],
@@ -150,12 +154,14 @@ export const NAV_ENTRIES: NavEntry[] = [
   // facility-nomenclature.ts's ALWAYS_VISIBLE).
   { label: 'Appointments', icon: ClipboardList, href: '/appointments', module: 'appointments', comingSoon: true },
 
-  // Inpatient (Sprint 6, shipped 2026-09-02): the occupancy board and the admissions worklist are
-  // two distinct real pages under the same module, mirroring Laboratory's Worklist/Catalog split.
-  // Admitting requires INPATIENT_ADD (a doctor/nurse/manager action); the occupancy board is
-  // read-only for anyone holding INPATIENT_VIEW.
+  // IPD (Inpatient Department, Sprint 6, shipped 2026-09-02): the occupancy board and the
+  // admissions worklist are two distinct real pages under the same module, mirroring Laboratory's
+  // Worklist/Catalog split. Labeled with the real hospital term (matches OPD's own naming fix
+  // above and PatientVisit.visit_type: "OPD"|"IPD") rather than the generic "Inpatient". Admitting
+  // requires INPATIENT_ADD (a doctor/nurse/manager action); the occupancy board is read-only for
+  // anyone holding INPATIENT_VIEW.
   {
-    label: 'Inpatient',
+    label: 'IPD',
     icon: Bed,
     module: 'inpatient',
     items: [

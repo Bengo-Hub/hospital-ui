@@ -178,7 +178,7 @@ export default function AdmissionsPage() {
     <div className="max-w-7xl mx-auto">
       <PageHeader
         title="Admissions"
-        subtitle="Inpatient worklist — admit, transfer, and discharge"
+        subtitle="IPD worklist — admit, transfer, and discharge"
         icon={<ClipboardList className="h-5 w-5" />}
         actions={
           <Can permission={P.INPATIENT_ADD}>
