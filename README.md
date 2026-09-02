@@ -3,13 +3,13 @@
 Frontend scaffold for `hospital-api` — the Codevertex Afya hospital/clinic management system.
 Next.js 16 (App Router) + React 19, multi-tenant via `[orgSlug]`, SSO/PKCE auth.
 
-**Status:** Sprints 0-6 shipped and live in production (Codevertex Afya), matching hospital-api's
+**Status:** Sprints 0-7 shipped and live in production (Codevertex Afya), matching hospital-api's
 own parity. Real pages exist for reception/triage, consultation, laboratory, pharmacy/dispensing
 (incl. controlled-substance witness flow), billing/insurance, inpatient (ward occupancy board,
-admissions worklist, admit/transfer/discharge), and a Staff & Roles / Config admin surface — all
-RBAC-gated (`Can`, `useAppPermissions`, a permission-filtered sidebar). See `docs/plan.md` for the
-current, authoritative status and `docs/sprints/` for what shipped in each sprint — this file is a
-static entry point, not the source of truth.
+admissions worklist, admit/transfer/discharge), theatre/ICU (Hospital tier only), and a Staff &
+Roles / Config admin surface — all RBAC-gated (`Can`, `useAppPermissions`, a permission-filtered
+sidebar). See `docs/plan.md` for the current, authoritative status and `docs/sprints/` for what
+shipped in each sprint — this file is a static entry point, not the source of truth.
 
 ## Stack
 

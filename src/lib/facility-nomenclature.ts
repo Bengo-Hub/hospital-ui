@@ -36,7 +36,10 @@ function isFacilityType(value: unknown): value is FacilityType {
 // facility-type-gated (see ALWAYS_VISIBLE below) — they're still listed here so the sidebar can
 // do a single `visible.has(item.module)` filter instead of special-casing ungated items.
 // 'inpatient' (Sprint 6, shipped 2026-09-02) IS gated — hidden for Chemist (no Patient/Visit to
-// admit at all), visible Clinic and up.
+// admit at all), visible Clinic and up. 'theatre'/'icu' (Sprint 7, shipped 2026-09-02) are gated
+// Hospital-tier ONLY (subscriptions-api's plans_hospital.go grants `theatre_module` — which both
+// share, see FeatureTheatreModule's own comment in hospital-api — exclusively at that tier) — the
+// first modules that need a facility-tier distinction narrower than "Clinic and above".
 export type NavModuleKey =
   | 'dashboard'
   | 'patients'
@@ -45,6 +48,8 @@ export type NavModuleKey =
   | 'laboratory'
   | 'pharmacy'
   | 'billing'
+  | 'theatre'
+  | 'icu'
   | 'users'
   | 'config';
 
@@ -81,6 +86,13 @@ const CHEMIST_MODULES: NavModuleKey[] = [...ALWAYS_VISIBLE, 'pharmacy', 'billing
 // the day a Facility+-only nav entry actually ships.
 const CLINIC_AND_ABOVE_MODULES: NavModuleKey[] = [...ALWAYS_VISIBLE, 'patients', 'laboratory', 'pharmacy', 'billing', 'inpatient'];
 
+// Hospital tier only (Sprint 7, shipped 2026-09-02): Theatre/OT scheduling + ICU critical-care
+// monitoring, gated by subscriptions-api's real plan matrix (`theatre_module` is granted
+// exclusively at the Hospital tier — see plans_hospital.go). The first module set narrower than
+// "Clinic and above" — extend this list (not collapse it) the day another Hospital-only nav entry
+// ships (Blood Bank, Ambulance, Specialized Programmes, per the roadmap).
+const HOSPITAL_ONLY_MODULES: NavModuleKey[] = [...CLINIC_AND_ABOVE_MODULES, 'theatre', 'icu'];
+
 /**
  * Which sidebar modules (by NavModuleKey) are visible for a given facility type. A module NOT
  * in the returned list must be hidden entirely (not rendered, not shown locked) per the
@@ -92,10 +104,13 @@ export function facilityModulesFor(facilityType: FacilityType): NavModuleKey[] {
       return CHEMIST_MODULES;
     case 'clinic':
     case 'facility':
+      return CLINIC_AND_ABOVE_MODULES;
     case 'hospital':
-      return CLINIC_AND_ABOVE_MODULES;
+      return HOSPITAL_ONLY_MODULES;
     default:
-      return CLINIC_AND_ABOVE_MODULES;
+      // Fail open to the full superset — matches useFacilityType()'s own "never wrongly COLLAPSE
+      // a real hospital tenant's sidebar" fallback for an unresolved facility type.
+      return HOSPITAL_ONLY_MODULES;
   }
 }
 

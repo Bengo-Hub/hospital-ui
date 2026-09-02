@@ -13,6 +13,7 @@
 // module (Dashboard, and the still-unbuilt Appointments/Admissions placeholders).
 
 import {
+  Activity,
   Banknote,
   Bed,
   ClipboardList,
@@ -22,6 +23,7 @@ import {
   History,
   LayoutDashboard,
   Pill,
+  Scissors,
   Settings,
   Shield,
   ShieldAlert,
@@ -160,6 +162,26 @@ export const NAV_ENTRIES: NavEntry[] = [
       { label: 'Ward Occupancy', icon: Bed, href: '/wards', permission: P.INPATIENT_VIEW },
       { label: 'Admissions', icon: ClipboardList, href: '/admissions', permission: P.INPATIENT_VIEW },
     ],
+  },
+
+  // Theatre/OT scheduling (Sprint 7, shipped 2026-09-02) — Hospital tier only. Booking requires
+  // THEATRE_ADD (a doctor/surgeon action); the schedule view is read-only for THEATRE_VIEW.
+  {
+    label: 'Theatre',
+    icon: Scissors,
+    href: '/theatre/schedule',
+    module: 'theatre',
+    permission: P.THEATRE_VIEW,
+  },
+
+  // ICU critical-care monitoring (Sprint 7, shipped 2026-09-02) — Hospital tier only, shares
+  // Theatre's subscription feature but is a distinct nursing-team-run workflow with its own RBAC.
+  {
+    label: 'ICU',
+    icon: Activity,
+    href: '/icu',
+    module: 'icu',
+    permission: P.ICU_VIEW,
   },
 
   // Baseline tenant administration (2026-08-30, expanded same day with role customization/audit

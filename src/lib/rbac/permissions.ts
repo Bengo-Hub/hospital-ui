@@ -7,7 +7,7 @@
 // Full module list — kept in sync with hospital-api's rbac/permissions.go.
 export const MODULES = [
   'consultation', 'triage', 'lab', 'pharmacy', 'billing', 'inpatient',
-  'records', 'reception', 'theatre', 'users', 'config',
+  'records', 'reception', 'theatre', 'icu', 'users', 'config',
 ] as const;
 
 export const P = {
@@ -74,6 +74,12 @@ export const P = {
   THEATRE_CHANGE: 'hospital.theatre.change',
   THEATRE_MANAGE: 'hospital.theatre.manage',
 
+  // ICU (critical-care monitoring episodes)
+  ICU_VIEW: 'hospital.icu.view',
+  ICU_ADD: 'hospital.icu.add',
+  ICU_CHANGE: 'hospital.icu.change',
+  ICU_MANAGE: 'hospital.icu.manage',
+
   // Users (tenant staff/role management)
   USERS_VIEW: 'hospital.users.view',
   USERS_MANAGE: 'hospital.users.manage',
@@ -120,6 +126,10 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     // Sprint 6 (2026-09-02): a doctor both admits and discharges/transfers-out (MANAGE — the same
     // permission ward/bed setup uses, a deliberate simplification, see hospital-api's rbac/seed.go).
     P.INPATIENT_VIEW, P.INPATIENT_ADD, P.INPATIENT_CHANGE, P.INPATIENT_MANAGE,
+    // Sprint 7 (2026-09-02): a doctor/surgeon runs theatre end to end; ICU rounds need viewing/
+    // updating severity, but starting/ending an episode is an ICU-nursing-team action.
+    P.THEATRE_VIEW, P.THEATRE_ADD, P.THEATRE_CHANGE, P.THEATRE_MANAGE,
+    P.ICU_VIEW, P.ICU_CHANGE,
     P.BILLING_COLLECT_OWN,
   ],
   nurse: [
@@ -127,6 +137,10 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     // Sprint 6 (2026-09-02): nurses admit + handle intra-facility transfers day-to-day; discharge/
     // transfer-out (MANAGE) stays doctor/manager-authorized.
     P.INPATIENT_VIEW, P.INPATIENT_ADD, P.INPATIENT_CHANGE,
+    // Sprint 7 (2026-09-02): ICU critical-care monitoring is nursing-team-run day to day; theatre
+    // scheduling stays view-only for a nurse.
+    P.ICU_VIEW, P.ICU_ADD, P.ICU_CHANGE, P.ICU_MANAGE,
+    P.THEATRE_VIEW,
     P.CONSULTATION_VIEW,
     P.RECORDS_VIEW,
     P.BILLING_COLLECT_OWN,
@@ -164,7 +178,9 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     P.RECEPTION_VIEW, P.RECEPTION_ADD, P.RECEPTION_CHANGE, P.RECEPTION_MANAGE,
     P.RECORDS_VIEW, P.RECORDS_CHANGE,
     P.INPATIENT_VIEW, P.INPATIENT_ADD, P.INPATIENT_CHANGE, P.INPATIENT_MANAGE,
-    P.THEATRE_VIEW,
+    // Sprint 7 (2026-09-02): a facility manager oversees theatre + ICU broadly.
+    P.THEATRE_VIEW, P.THEATRE_ADD, P.THEATRE_CHANGE, P.THEATRE_MANAGE,
+    P.ICU_VIEW, P.ICU_ADD, P.ICU_CHANGE, P.ICU_MANAGE,
     P.USERS_VIEW,
     P.CONFIG_VIEW,
   ],
