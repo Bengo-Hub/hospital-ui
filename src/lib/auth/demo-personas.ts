@@ -40,7 +40,14 @@ export const DEMO_PERSONA_GROUPS: DemoPersonaGroup[] = [
     key: 'chemist',
     title: 'Afya Chemist / Pharmacy',
     description: 'Standalone walk-in sale + dispensing, no clinical workflow — a 1-2-person chemist shop or pharmacy counter.',
-    accounts: [{ label: 'Chemist', email: 'pharmacist.chemist@demo.codevertexafrica.com', password: 'DemoStaff2024!' }],
+    // Listed twice under two labels, not two accounts — this is genuinely ONE tier (see this
+    // file's own top comment) and there is no separate pharmacy-tier backend user to point a
+    // second card at. Both cards sign in as the identical pharmacist.chemist@ account; this is
+    // deliberately what the "Pharmacy" card should do, not a placeholder for a future one.
+    accounts: [
+      { label: 'Chemist', email: 'pharmacist.chemist@demo.codevertexafrica.com', password: 'DemoStaff2024!' },
+      { label: 'Pharmacy', email: 'pharmacist.chemist@demo.codevertexafrica.com', password: 'DemoStaff2024!' },
+    ],
   },
   {
     key: 'clinic',

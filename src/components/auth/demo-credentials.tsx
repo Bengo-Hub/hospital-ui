@@ -111,7 +111,10 @@ export function DemoCredentials({ onSelect }: { onSelect?: (account: DemoAccount
                 <div className="px-4 pb-3.5">
                   <div className="flex gap-2 overflow-x-auto pb-1 -mx-0.5 px-0.5">
                     {group.accounts.map((acc) => (
-                      <AccountCard key={acc.email} account={acc} onSelect={onSelect ?? (() => {})} />
+                      // Keyed by label, not email — the chemist group deliberately lists the same
+                      // real account twice under two labels ("Chemist" / "Pharmacy"), since
+                      // there's no separate pharmacy-tier backend account (see demo-personas.ts).
+                      <AccountCard key={acc.label} account={acc} onSelect={onSelect ?? (() => {})} />
                     ))}
                   </div>
                 </div>

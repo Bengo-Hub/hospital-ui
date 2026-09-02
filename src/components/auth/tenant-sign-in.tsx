@@ -51,6 +51,16 @@ export function TenantSignIn({ orgSlug }: { orgSlug?: string }) {
     cardScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  // Both card divs below use `justify-center-safe`, NOT plain `justify-center` — this is
+  // deliberate, not a typo. Plain `justify-center` on a flex column with `overflow-y-auto`
+  // centers content by pushing it up past the container's own top edge when content overflows
+  // (multiple DemoCredentials groups expanded at once, or a short viewport), and a flex
+  // container can't scroll to a NEGATIVE position — so the top of the content, the very thing
+  // scrollTo({top:0}) above is trying to reveal, becomes permanently unreachable no matter how
+  // far up you scroll. Reported live 2026-09-02 ("scrolling up does not expose it"). `-safe`
+  // falls back to start-alignment exactly when content overflows, keeping everything reachable,
+  // while still centering normally when content is short enough to fit.
+
   const header = (
     <PinLoginHeader
       serviceName="Codevertex Afya"
@@ -78,7 +88,7 @@ export function TenantSignIn({ orgSlug }: { orgSlug?: string }) {
         header={header}
         brandPanel={brandPanel}
         card={
-          <div className="flex-1 min-h-0 flex flex-col p-4 sm:p-8 overflow-y-auto justify-center">
+          <div className="flex-1 min-h-0 flex flex-col p-4 sm:p-8 overflow-y-auto justify-center-safe">
             <div className="max-w-2xl w-full mx-auto space-y-5">
               <div className="text-center space-y-1">
                 <ClipboardCheck className="h-8 w-8 text-brand-primary mx-auto" />
@@ -111,7 +121,7 @@ export function TenantSignIn({ orgSlug }: { orgSlug?: string }) {
       header={header}
       brandPanel={brandPanel}
       card={
-        <div ref={cardScrollRef} className="flex-1 min-h-0 flex flex-col gap-5 p-4 sm:p-8 overflow-y-auto justify-center">
+        <div ref={cardScrollRef} className="flex-1 min-h-0 flex flex-col gap-5 p-4 sm:p-8 overflow-y-auto justify-center-safe">
           <div className="w-full max-w-sm mx-auto space-y-5">
             <div>
               <h1 className="text-xl font-black tracking-tight text-foreground">Sign in to {tenantName}</h1>
