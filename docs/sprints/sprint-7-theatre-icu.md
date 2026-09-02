@@ -1,6 +1,6 @@
 # Hospital UI — Sprint 7: Theatre/OT Scheduling + ICU Monitoring Board
 
-**Status:** ✅ Shipped 2026-09-02 (`hospital-ui@<pending-commit>`). `pnpm type-check`/`pnpm build` both clean; dev server boot-checked (no SSR crash on `/theatre/schedule`/`/icu`) — a full authenticated browser click-through was NOT done this pass, same acknowledged gap as Sprint 6.
+**Status:** ✅ Shipped 2026-09-02 (`hospital-ui@c0ba527`). `pnpm type-check`/`pnpm build` both clean; dev server boot-checked (no SSR crash on `/theatre/schedule`/`/icu`) — a full authenticated browser click-through was NOT done this pass, same acknowledged gap as Sprint 6.
 **Depends on:** `hospital-api` Sprint 7
 **Goal:** Surgery scheduling with visible conflict detection, ICU severity-flag board.
 
