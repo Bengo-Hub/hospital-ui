@@ -38,9 +38,9 @@ import {
 import { InsuranceClaimModal } from '@/components/billing/insurance-claim-modal';
 import { VisitChargesPanel } from '@/components/billing/visit-charges-panel';
 import { WalkInSalePanel } from '@/components/pharmacy/walk-in-sale-panel';
+import { WitnessConfirmForm, type ConfirmedWitness } from '@/components/pharmacy/witness-confirm-form';
 import { pharmacyApi } from '@/lib/api/pharmacy';
 import type { DispenseLineInput, PrescriptionStatus, InteractionCheck } from '@/lib/api/pharmacy';
-import { WitnessConfirmForm, type ConfirmedWitness } from './witness-confirm-form';
 
 const STATUS_LABELS: Record<PrescriptionStatus, string> = {
   pending: 'Pending',

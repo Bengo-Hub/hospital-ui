@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Eye, Loader2, Pill, Plus, Receipt, ShieldAlert, Trash2, X } from 'lucide-react';
+import { Eye, Loader2, Pill, Plus, Receipt, ShieldAlert, ShoppingCart, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
 import { Card, Button, Badge, Input } from '@/components/ui/base';
@@ -13,6 +13,7 @@ import { apiErrorMessage } from '@/lib/api/error-message';
 import { usePrescriptions, useCreatePrescription } from '@/hooks/usePharmacy';
 import { usePatients, useVisits } from '@/hooks/useClinical';
 import { useFacilityType } from '@/lib/facility-nomenclature';
+import { NewSaleModal } from '@/components/pharmacy/new-sale-modal';
 import { pharmacyApi } from '@/lib/api/pharmacy';
 import type { CreatePrescriptionInput, DrugSearchItem, PrescriptionLineInput, PrescriptionStatus } from '@/lib/api/pharmacy';
 
@@ -373,6 +374,7 @@ export default function PharmacyPage() {
   const orgSlug = params?.orgSlug as string;
   const [statusFilter, setStatusFilter] = useState<PrescriptionStatus | ''>('');
   const [createOpen, setCreateOpen] = useState(false);
+  const [newSaleOpen, setNewSaleOpen] = useState(false);
   const { data: prescriptions, isLoading } = usePrescriptions(statusFilter || undefined);
   const facilityType = useFacilityType();
 
@@ -405,9 +407,17 @@ export default function PharmacyPage() {
             <Can permission="hospital.pharmacy.prescribe">
               <Button className="gap-2" onClick={() => setCreateOpen(true)}>
                 <Plus className="h-4 w-4" />
-                New Prescription
+                {facilityType === 'chemist' ? 'Dispense External Rx' : 'New Prescription'}
               </Button>
             </Can>
+            {facilityType === 'chemist' && (
+              <Can permission="hospital.pharmacy.prescribe">
+                <Button className="gap-2" onClick={() => setNewSaleOpen(true)}>
+                  <ShoppingCart className="h-4 w-4" />
+                  New Sale
+                </Button>
+              </Can>
+            )}
           </>
         }
       />
@@ -482,6 +492,7 @@ export default function PharmacyPage() {
       </Card>
 
       {createOpen && <NewPrescriptionModal orgSlug={orgSlug} onClose={() => setCreateOpen(false)} />}
+      {newSaleOpen && <NewSaleModal orgSlug={orgSlug} onClose={() => setNewSaleOpen(false)} />}
     </div>
   );
 }
