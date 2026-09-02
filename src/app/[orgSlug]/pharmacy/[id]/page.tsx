@@ -37,6 +37,7 @@ import {
 } from '@/hooks/usePharmacy';
 import { InsuranceClaimModal } from '@/components/billing/insurance-claim-modal';
 import { VisitChargesPanel } from '@/components/billing/visit-charges-panel';
+import { WalkInSalePanel } from '@/components/pharmacy/walk-in-sale-panel';
 import { pharmacyApi } from '@/lib/api/pharmacy';
 import type { DispenseLineInput, PrescriptionStatus, InteractionCheck } from '@/lib/api/pharmacy';
 import { WitnessConfirmForm, type ConfirmedWitness } from './witness-confirm-form';
@@ -308,8 +309,12 @@ export default function PrescriptionDetailPage() {
   const canRejectOrCancel = !TERMINAL_STATUSES.includes(rx.status) && rx.status !== 'partially_dispensed';
   // Insurance settles a dispensed line's charge instead of cash — only makes sense once at
   // least one line has actually been dispensed (mirrors pharmacy.Service.SubmitInsuranceClaim's
-  // own precondition on the server side).
-  const canBillInsurance = rx.status === 'dispensed' || rx.status === 'partially_dispensed';
+  // own precondition on the server side). Also requires a real patient/visit account to claim
+  // against — a Chemist walk-in has neither (it bills via WalkInSale instead, not insurance),
+  // and SubmitInsuranceClaim hard-errors "prescription has no linked patient/visit account to
+  // claim against" for one; this guard keeps the button from being shown where it can only fail.
+  const canBillInsurance =
+    (rx.status === 'dispensed' || rx.status === 'partially_dispensed') && !!rx.patient_id && !!rx.visit_id;
   // Mirrors hospital-api's RecheckInteractions's own canReflag condition — re-checking a
   // dispensed/rejected/cancelled prescription still records the check for audit but can't
   // change a status that's already terminal, so the action is hidden there.
@@ -693,6 +698,9 @@ export default function PrescriptionDetailPage() {
       </Card>
 
       {rx.visit_id && <VisitChargesPanel visitId={rx.visit_id} className="mt-5" />}
+      {!rx.visit_id && (rx.edges?.walk_in_sales?.length ?? 0) > 0 && (
+        <WalkInSalePanel sales={rx.edges!.walk_in_sales!} className="mt-5" />
+      )}
 
       {showInsurance && rx && (
         <InsuranceClaimModal

@@ -4,7 +4,7 @@
 
 import { apiClient } from './client';
 import { hospitalBase, unwrapList } from './types';
-import type { InsuranceClaimResult } from './billing';
+import type { InsuranceClaimResult, PaymentMethod } from './billing';
 
 export interface InteractionCheck {
   id: string;
@@ -61,7 +61,49 @@ export interface Prescription {
   metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
-  edges?: { lines?: PrescriptionLine[] };
+  edges?: { lines?: PrescriptionLine[]; walk_in_sales?: WalkInSale[] };
+}
+
+// ── WalkInSale (Chemist-tier ledgerless checkout, 2026-09-02) ──────────────────────────────
+//
+// A Chemist tenant can't create a Patient/Visit, so a walk-in prescription's dispense charge
+// can't post to the PatientAccount ledger. WalkInSale is the ledgerless till-transaction
+// record for that case instead — see billing.Service.CreateWalkInSale (hospital-api) for the
+// full design. Field names match hospital-api's Ent-generated JSON tags.
+export type WalkInSaleStatus = 'pending' | 'paid' | 'waived';
+
+export interface WalkInSaleLineItem {
+  drug_name: string;
+  sku?: string;
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+}
+
+export interface WalkInSale {
+  id: string;
+  tenant_id: string;
+  outlet_id: string;
+  prescription_id: string;
+  prescription_number: string;
+  sale_number: string;
+  patient_name?: string;
+  line_items?: WalkInSaleLineItem[];
+  amount: number;
+  status: WalkInSaleStatus;
+  payment_method?: string;
+  treasury_invoice_id?: string;
+  treasury_payment_intent_id?: string;
+  collected_by?: string;
+  created_by_user_id?: string;
+  paid_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CollectWalkInSaleInput {
+  payment_method: PaymentMethod;
+  phone_number?: string;
 }
 
 export interface PrescriptionLineInput {
@@ -191,4 +233,14 @@ export const pharmacyApi = {
    *  navigation — mirrors treasury-ui's own document-preview convention. */
   downloadLabel: (orgSlug: string, prescriptionId: string, lineId: string) =>
     apiClient.getBlob(`${hospitalBase(orgSlug)}/prescriptions/${prescriptionId}/lines/${lineId}/label.pdf`),
+
+  // ── WalkInSale (Chemist-tier ledgerless checkout) ──────────────────────────────────────
+  listWalkInSales: async (orgSlug: string, status?: string): Promise<WalkInSale[]> => {
+    const res = await apiClient.get<{ data: WalkInSale[] }>(`${hospitalBase(orgSlug)}/pharmacy/walk-in-sales`, status ? { status } : undefined);
+    return unwrapList(res);
+  },
+  collectWalkInSale: (orgSlug: string, saleId: string, data: CollectWalkInSaleInput) =>
+    apiClient.post<WalkInSale>(`${hospitalBase(orgSlug)}/pharmacy/walk-in-sales/${saleId}/collect`, data),
+  waiveWalkInSale: (orgSlug: string, saleId: string) =>
+    apiClient.post<WalkInSale>(`${hospitalBase(orgSlug)}/pharmacy/walk-in-sales/${saleId}/waive`, {}),
 };

@@ -7,7 +7,7 @@ import { Banknote, CreditCard } from 'lucide-react';
 import { Card, Button, Badge } from '@/components/ui/base';
 import { PageHeader, EmptyState, Skeleton } from '@/components/ui/page';
 import { Can } from '@/components/auth/can';
-import { usePendingCharges } from '@/hooks/useBilling';
+import { usePendingCharges, useCollectCharge } from '@/hooks/useBilling';
 import { CollectPaymentDialog } from '@/components/billing/collect-payment-dialog';
 import type { BillableCharge, ChargeStatus } from '@/lib/api/billing';
 
@@ -55,6 +55,7 @@ export default function BillingQueuePage() {
   // department stays local state after that so the user can freely change the filter.
   const [department, setDepartment] = useState(() => searchParams?.get('department') ?? '');
   const { data: charges, isLoading } = usePendingCharges(department || undefined);
+  const collect = useCollectCharge();
   const [collectCharge, setCollectCharge] = useState<BillableCharge | null>(null);
 
   const rows = charges ?? [];
@@ -145,7 +146,14 @@ export default function BillingQueuePage() {
         )}
       </Card>
 
-      {collectCharge && <CollectPaymentDialog charge={collectCharge} onClose={() => setCollectCharge(null)} />}
+      {collectCharge && (
+        <CollectPaymentDialog
+          description={collectCharge.description}
+          amount={collectCharge.amount}
+          onCollect={(data) => collect.mutateAsync({ chargeId: collectCharge.id, data })}
+          onClose={() => setCollectCharge(null)}
+        />
+      )}
     </div>
   );
 }

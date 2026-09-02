@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Eye, Loader2, Pill, Plus, ShieldAlert, Trash2, X } from 'lucide-react';
+import { Eye, Loader2, Pill, Plus, Receipt, ShieldAlert, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, Button, Badge, Input } from '@/components/ui/base';
 import { PageHeader, EmptyState, Skeleton } from '@/components/ui/page';
@@ -11,6 +11,7 @@ import { Can } from '@/components/auth/can';
 import { apiErrorMessage } from '@/lib/api/error-message';
 import { usePrescriptions, useCreatePrescription } from '@/hooks/usePharmacy';
 import { usePatients, useVisits } from '@/hooks/useClinical';
+import { useFacilityType } from '@/lib/facility-nomenclature';
 import type { CreatePrescriptionInput, PrescriptionLineInput, PrescriptionStatus } from '@/lib/api/pharmacy';
 
 const STATUS_LABELS: Record<PrescriptionStatus, string> = {
@@ -324,6 +325,7 @@ export default function PharmacyPage() {
   const [statusFilter, setStatusFilter] = useState<PrescriptionStatus | ''>('');
   const [createOpen, setCreateOpen] = useState(false);
   const { data: prescriptions, isLoading } = usePrescriptions(statusFilter || undefined);
+  const facilityType = useFacilityType();
 
   const rows = prescriptions ?? [];
 
@@ -335,6 +337,15 @@ export default function PharmacyPage() {
         icon={<Pill className="h-5 w-5" />}
         actions={
           <>
+            {facilityType === 'chemist' && (
+              <Link
+                href={`/${orgSlug}/pharmacy/walk-in-sales`}
+                className="inline-flex items-center gap-2 border border-border bg-background text-foreground px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-accent transition-colors"
+              >
+                <Receipt className="h-4 w-4" />
+                Today&apos;s Sales
+              </Link>
+            )}
             <Link
               href={`/${orgSlug}/pharmacy/controlled-substances`}
               className="inline-flex items-center gap-2 border border-border bg-background text-foreground px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-accent transition-colors"

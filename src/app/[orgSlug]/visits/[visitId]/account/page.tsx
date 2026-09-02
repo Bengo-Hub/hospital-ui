@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { AlertOctagon, Banknote, CreditCard, Loader2, ShieldAlert, ShieldCheck, Wallet, X } from 'lucide-react';
+import { AlertOctagon, Banknote, CreditCard, Loader2, Receipt, ShieldAlert, ShieldCheck, Wallet, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, Button, Badge, Input } from '@/components/ui/base';
 import { PageHeader, StatCard, EmptyState, Skeleton } from '@/components/ui/page';
@@ -11,7 +12,7 @@ import { apiErrorMessage } from '@/lib/api/error-message';
 import { useFacilityType } from '@/lib/facility-nomenclature';
 import {
   useAccountByVisit,
-  usePendingCharges,
+  useCollectCharge,
   useSettleAccount,
   useOverrideSettlement,
   useSubmitVisitInsuranceClaim,
@@ -276,45 +277,28 @@ function OverrideModal({ account, onClose }: { account: PatientAccount; onClose:
 // param entirely and just lists whatever pending charges already exist for the tenant, with a
 // direct Collect action — the smallest-scope facility type gets the smallest-scope page.
 
-function ChemistCheckout() {
-  const { data: charges, isLoading } = usePendingCharges();
-  const [collectCharge, setCollectCharge] = useState<BillableCharge | null>(null);
-  const rows = charges ?? [];
-
+// A Chemist tenant never has a Patient/Visit at all (feature-gated off both), so this
+// visit-scoped route is structurally unreachable for one in normal navigation — there is no
+// visitId to link here with. This branch exists only as a defensive landing for a stale/typed
+// URL, pointing to the real Chemist checkout surface instead. A previous version of this file
+// rendered a "ChemistCheckout" component backed by the BillableCharge queue (usePendingCharges) —
+// that queue can never contain a chemist walk-in sale's charge (see billing.Service.
+// CreateWalkInSale's doc comment in hospital-api), so it always rendered "Nothing pending" for a
+// real chemist tenant. Removed as dead code now that WalkInSale/the Today's Sales page (2026-09-02)
+// is the real fix.
+function ChemistCheckoutRedirect({ orgSlug }: { orgSlug: string }) {
   return (
     <div className="max-w-3xl mx-auto">
-      <PageHeader title="Checkout" subtitle="Pending charges awaiting payment" icon={<Banknote className="h-5 w-5" />} />
-      <Card>
-        {isLoading ? (
-          <div className="p-6 space-y-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
-          </div>
-        ) : rows.length === 0 ? (
-          <EmptyState icon={<Banknote className="h-10 w-10" />} title="Nothing pending" description="Charges from a dispensed prescription appear here." />
-        ) : (
-          <div className="divide-y divide-border">
-            {rows.map((c) => (
-              <div key={c.id} className="flex items-center justify-between gap-4 px-5 py-4">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{c.description}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{c.amount.toFixed(2)}</p>
-                </div>
-                {(c.status === 'pending' || c.status === 'invoiced') && (
-                  <Can permission="hospital.billing.collect_own">
-                    <Button size="sm" className="gap-1.5 shrink-0" onClick={() => setCollectCharge(c)}>
-                      <CreditCard className="h-3.5 w-3.5" />
-                      Collect
-                    </Button>
-                  </Can>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-      {collectCharge && <CollectPaymentDialog charge={collectCharge} onClose={() => setCollectCharge(null)} />}
+      <EmptyState
+        icon={<Receipt className="h-10 w-10" />}
+        title="Chemist checkout has moved"
+        description="Walk-in sale payment collection now lives on the Today's Sales page."
+        action={
+          <Link href={`/${orgSlug}/pharmacy/walk-in-sales`} className="text-sm text-primary underline">
+            Go to Today&apos;s Sales
+          </Link>
+        }
+      />
     </div>
   );
 }
@@ -323,6 +307,7 @@ function ChemistCheckout() {
 
 function PatientAccountLedger({ visitId, showSettlementActions }: { visitId: string; showSettlementActions: boolean }) {
   const { data, isLoading } = useAccountByVisit(visitId);
+  const collect = useCollectCharge();
   const [collectCharge, setCollectCharge] = useState<BillableCharge | null>(null);
   const [insuranceCharge, setInsuranceCharge] = useState<BillableCharge | null>(null);
   const [settleOpen, setSettleOpen] = useState(false);
@@ -449,7 +434,14 @@ function PatientAccountLedger({ visitId, showSettlementActions }: { visitId: str
         )}
       </Card>
 
-      {collectCharge && <CollectPaymentDialog charge={collectCharge} onClose={() => setCollectCharge(null)} />}
+      {collectCharge && (
+        <CollectPaymentDialog
+          description={collectCharge.description}
+          amount={collectCharge.amount}
+          onCollect={(data) => collect.mutateAsync({ chargeId: collectCharge.id, data })}
+          onClose={() => setCollectCharge(null)}
+        />
+      )}
       {settleOpen && <SettleModal account={account} onClose={() => setSettleOpen(false)} />}
       {overrideOpen && <OverrideModal account={account} onClose={() => setOverrideOpen(false)} />}
       {insuranceCharge && (
@@ -470,11 +462,12 @@ function PatientAccountLedger({ visitId, showSettlementActions }: { visitId: str
 
 export default function PatientAccountPage() {
   const params = useParams();
+  const orgSlug = params?.orgSlug as string;
   const visitId = params?.visitId as string;
   const facilityType = useFacilityType();
 
   if (facilityType === 'chemist') {
-    return <ChemistCheckout />;
+    return <ChemistCheckoutRedirect orgSlug={orgSlug} />;
   }
 
   return <PatientAccountLedger visitId={visitId} showSettlementActions={facilityType === 'facility' || facilityType === 'hospital'} />;

@@ -2,7 +2,13 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
-import { pharmacyApi, type CreatePrescriptionInput, type DispenseInput, type VerifyWitnessInput } from '@/lib/api/pharmacy';
+import {
+  pharmacyApi,
+  type CreatePrescriptionInput,
+  type DispenseInput,
+  type VerifyWitnessInput,
+  type CollectWalkInSaleInput,
+} from '@/lib/api/pharmacy';
 
 function useOrgSlug(): string {
   const params = useParams();
@@ -101,6 +107,43 @@ export function useRecheckInteractions() {
     mutationFn: ({ id, allergyFlags }: { id: string; allergyFlags?: string[] }) =>
       pharmacyApi.recheckInteractions(orgSlug, id, allergyFlags),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['hospital', 'prescriptions', orgSlug] }),
+  });
+}
+
+// ── WalkInSale (Chemist-tier ledgerless checkout) ────────────────────────────────────────
+
+export function useWalkInSales(status?: string) {
+  const orgSlug = useOrgSlug();
+  return useQuery({
+    queryKey: ['hospital', 'walk-in-sales', orgSlug, status],
+    queryFn: () => pharmacyApi.listWalkInSales(orgSlug, status),
+    enabled: !!orgSlug,
+    refetchInterval: 15000,
+  });
+}
+
+export function useCollectWalkInSale() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ saleId, data }: { saleId: string; data: CollectWalkInSaleInput }) =>
+      pharmacyApi.collectWalkInSale(orgSlug, saleId, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['hospital', 'walk-in-sales', orgSlug] });
+      qc.invalidateQueries({ queryKey: ['hospital', 'prescriptions', orgSlug] });
+    },
+  });
+}
+
+export function useWaiveWalkInSale() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (saleId: string) => pharmacyApi.waiveWalkInSale(orgSlug, saleId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['hospital', 'walk-in-sales', orgSlug] });
+      qc.invalidateQueries({ queryKey: ['hospital', 'prescriptions', orgSlug] });
+    },
   });
 }
 

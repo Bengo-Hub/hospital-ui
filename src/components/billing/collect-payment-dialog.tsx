@@ -5,8 +5,7 @@ import { CreditCard, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, Input } from '@/components/ui/base';
 import { apiErrorMessage } from '@/lib/api/error-message';
-import { useCollectCharge } from '@/hooks/useBilling';
-import type { BillableCharge, PaymentMethod } from '@/lib/api/billing';
+import type { PaymentMethod } from '@/lib/api/billing';
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: 'mpesa', label: 'M-Pesa' },
@@ -17,11 +16,23 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
 ];
 
 /** Shared collect-payment modal — every point-of-charge surface (Billing queue, the visit account
- * ledger, and the point-of-charge widgets embedded in Triage/Consultation/Lab/Pharmacy/Patients)
- * uses this one component instead of near-identical copies. Mirrors InsuranceClaimModal's
- * shared-modal pattern in this same directory. */
-export function CollectPaymentDialog({ charge, onClose }: { charge: BillableCharge; onClose: () => void }) {
-  const collect = useCollectCharge();
+ * ledger, the point-of-charge widgets embedded in Triage/Consultation/Lab/Pharmacy/Patients, and a
+ * Chemist's WalkInSale queue) uses this one component instead of near-identical copies. Mirrors
+ * InsuranceClaimModal's shared-modal pattern in this same directory. Decoupled from BillableCharge
+ * specifically (2026-09-02) so a WalkInSale — a different backing entity with no PatientAccount at
+ * all — can reuse the exact same collect UI/UX via a plain description+amount+onCollect contract. */
+export function CollectPaymentDialog({
+  description,
+  amount,
+  onCollect,
+  onClose,
+}: {
+  description: string;
+  amount: number;
+  onCollect: (data: { payment_method: PaymentMethod; phone_number?: string }) => Promise<unknown>;
+  onClose: () => void;
+}) {
+  const [isPending, setIsPending] = useState(false);
   const [method, setMethod] = useState<PaymentMethod>('mpesa');
   const [phone, setPhone] = useState('');
 
@@ -30,15 +41,15 @@ export function CollectPaymentDialog({ charge, onClose }: { charge: BillableChar
       toast.error('Enter the M-Pesa phone number');
       return;
     }
+    setIsPending(true);
     try {
-      await collect.mutateAsync({
-        chargeId: charge.id,
-        data: { payment_method: method, phone_number: method === 'mpesa' ? phone.trim() : undefined },
-      });
+      await onCollect({ payment_method: method, phone_number: method === 'mpesa' ? phone.trim() : undefined });
       toast.success('Payment collected');
       onClose();
     } catch (e) {
       toast.error(await apiErrorMessage(e, 'Failed to collect payment'));
+    } finally {
+      setIsPending(false);
     }
   };
 
@@ -52,7 +63,7 @@ export function CollectPaymentDialog({ charge, onClose }: { charge: BillableChar
             </div>
             <div>
               <h3 className="font-bold text-base">Collect Payment</h3>
-              <p className="text-xs text-muted-foreground">{charge.description}</p>
+              <p className="text-xs text-muted-foreground">{description}</p>
             </div>
           </div>
           <button onClick={onClose} className="h-9 w-9 rounded-xl flex items-center justify-center hover:bg-accent">
@@ -62,7 +73,7 @@ export function CollectPaymentDialog({ charge, onClose }: { charge: BillableChar
         <div className="p-6 space-y-4">
           <div className="rounded-xl border border-border bg-background/50 px-4 py-3 flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Amount Due</span>
-            <span className="text-lg font-bold">{charge.amount.toFixed(2)}</span>
+            <span className="text-lg font-bold">{amount.toFixed(2)}</span>
           </div>
           <div>
             <label className="text-xs font-semibold text-muted-foreground mb-1 block">Payment Method</label>
@@ -88,11 +99,11 @@ export function CollectPaymentDialog({ charge, onClose }: { charge: BillableChar
           )}
         </div>
         <div className="flex gap-3 px-6 pb-6">
-          <Button variant="outline" className="flex-1" onClick={onClose} disabled={collect.isPending}>
+          <Button variant="outline" className="flex-1" onClick={onClose} disabled={isPending}>
             Cancel
           </Button>
-          <Button className="flex-1 gap-2" onClick={handleSubmit} disabled={collect.isPending}>
-            {collect.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+          <Button className="flex-1 gap-2" onClick={handleSubmit} disabled={isPending}>
+            {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
             Confirm Payment
           </Button>
         </div>

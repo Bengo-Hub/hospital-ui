@@ -6,7 +6,7 @@ import { Card, Button } from '@/components/ui/base';
 import { Can } from '@/components/auth/can';
 import { cn } from '@/lib/utils';
 import { P } from '@/lib/rbac/permissions';
-import { useAccountByVisit } from '@/hooks/useBilling';
+import { useAccountByVisit, useCollectCharge } from '@/hooks/useBilling';
 import { CollectPaymentDialog } from '@/components/billing/collect-payment-dialog';
 import type { BillableCharge } from '@/lib/api/billing';
 
@@ -26,6 +26,7 @@ import type { BillableCharge } from '@/lib/api/billing';
  * the common case where nothing is owed yet. */
 export function VisitChargesPanel({ visitId, className }: { visitId: string; className?: string }) {
   const { data, isLoading, isError } = useAccountByVisit(visitId);
+  const collect = useCollectCharge();
   const [collectCharge, setCollectCharge] = useState<BillableCharge | null>(null);
 
   if (isLoading || isError) return null;
@@ -62,7 +63,14 @@ export function VisitChargesPanel({ visitId, className }: { visitId: string; cla
           </div>
         ))}
       </div>
-      {collectCharge && <CollectPaymentDialog charge={collectCharge} onClose={() => setCollectCharge(null)} />}
+      {collectCharge && (
+        <CollectPaymentDialog
+          description={collectCharge.description}
+          amount={collectCharge.amount}
+          onCollect={(data) => collect.mutateAsync({ chargeId: collectCharge.id, data })}
+          onClose={() => setCollectCharge(null)}
+        />
+      )}
     </Card>
   );
 }
