@@ -303,10 +303,15 @@ function ConsultationQueuePage() {
   const orgSlug = (params?.orgSlug as string) ?? '';
   const { data: triaged, isLoading: l1 } = useVisits('triaged');
   const { data: inExamination, isLoading: l2 } = useVisits('in_examination');
+  // A visit reopens to lab_complete once its referred lab order is fully resulted (see
+  // lab.Service.EnterResult's nextVisitStatusAfterLabComplete in hospital-api, which also
+  // reopens the linked ExaminationRecord to in_progress) — but until this queue included it,
+  // there was no queue-driven path back to the clinician for those visits at all.
+  const { data: labComplete, isLoading: l3 } = useVisits('lab_complete');
   const [active, setActive] = useState<PatientVisit | null>(null);
 
-  const isLoading = l1 || l2;
-  const visits = [...(triaged ?? []), ...(inExamination ?? [])];
+  const isLoading = l1 || l2 || l3;
+  const visits = [...(labComplete ?? []), ...(inExamination ?? []), ...(triaged ?? [])];
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -326,7 +331,7 @@ function ConsultationQueuePage() {
         <EmptyState
           icon={<Stethoscope className="h-10 w-10" />}
           title="No patients waiting for consultation"
-          description="Visits appear here once vitals are recorded in Triage."
+          description="Visits appear here once vitals are recorded in Triage, or once a referred lab order's results come back."
           action={
             <Link href={`/${orgSlug}/triage`} className="text-sm text-primary underline underline-offset-2">
               Go to Triage →
