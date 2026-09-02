@@ -2,9 +2,15 @@
 
 **Status:** ✅ Core ledger UI shipped 2026-08-29 (`hospital-ui@e6a4216`) — `/billing/queue`
 (cashier desk, department filter, `collect_any`-gated Collect) and `/visits/[visitId]/account`
-(facility-type-branched: chemist tier gets a flat `ChemistCheckout`, clinic+ get the full
-`PatientAccountLedger` with StatCards + per-charge Collect Now; Settle/Override-Settlement gated to
-facility+hospital tiers). ✅ Insurance eligibility/claim-submit UI shipped 2026-08-30
+(facility-type-branched: clinic+ get the full `PatientAccountLedger` with StatCards + per-charge
+Collect Now, Settle/Override-Settlement gated to facility+hospital tiers). **Correction
+2026-09-02**: the chemist-tier branch (`ChemistCheckout`, listed as shipped below) was a real
+bug, not a working feature — it read `usePendingCharges()` (the `BillableCharge` queue), which
+structurally can never contain a chemist walk-in dispense's charge (hospital-api's
+`PostCharge`/`PatientAccount` requires a real patient/visit, which a chemist can never have), so
+it always rendered "Nothing pending" for a real chemist tenant. Removed; superseded by a real
+`WalkInSale`-backed `/pharmacy/walk-in-sales` "Today's Sales" page (hospital-api's matching fix
+shipped the same day) — this route now points there instead. ✅ Insurance eligibility/claim-submit UI shipped 2026-08-30
 (`hospital-ui@d81188c`) — a shared `InsuranceClaimModal` component reused across Lab, Pharmacy and
 this visit-level route, with a real provider picker (closed a previously-undiscovered gap:
 treasury-api's provider list was admin-JWT-only, fixed via a new S2S route, `treasury-api@e67ef9d`).
@@ -49,8 +55,11 @@ Billing & Patient Accounts" section for the design rationale.
   Record Payment / Apply Insurance / Write-Off / "next of kin settling" options right on the
   discharge screen, not a separate detour.
 - **Facility-type adaptive surface** (ties into the sidebar work — `facility-nomenclature.ts`): a
-  Chemist-configured tenant sees only a Walk-in Sale screen under Billing — no account/ledger/queue
-  UI at all, matching pos-api's pharmacy "direct" checkout today.
+  Chemist-configured tenant sees only a Walk-in Sale screen (`/pharmacy/walk-in-sales`, "Today's
+  Sales", linked from the Pharmacy page header) — no `PatientAccount` ledger/queue UI at all,
+  matching pos-api's pharmacy "direct" checkout, and backed by a real `WalkInSale` entity
+  (2026-09-02) rather than the broken `BillableCharge`-queue read the original `ChemistCheckout`
+  page used.
 
 ## Definition of Done
 
@@ -65,8 +74,12 @@ Billing & Patient Accounts" section for the design rationale.
 - [x] Insurance claim submission has a real provider picker and reports accepted vs.
       pending-adjudication clearly; never silently blocks checkout if unavailable (a transport
       error surfaces via toast, the charge stays untouched for cash collection instead).
-- [x] A chemist-configured demo tenant's Billing nav shows only Walk-in Sale.
-- [x] `pnpm build`/`type-check` clean (verified 2026-08-30).
+- [x] A chemist-configured demo tenant's Billing nav shows only Walk-in Sale. **Corrected
+      2026-09-02** — this checkbox previously verified only that the nav pointed somewhere, not
+      that the destination worked; the actual `ChemistCheckout` page was broken (see Status
+      above). Now backed by a real `WalkInSale`-driven "Today's Sales" page at
+      `/pharmacy/walk-in-sales`.
+- [x] `pnpm build`/`type-check` clean (verified 2026-08-30, re-verified 2026-09-02).
 
 ## Next Sprint
 
