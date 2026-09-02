@@ -143,6 +143,9 @@ export interface UpdateBillableItemInput {
 export const billingApi = {
   getAccountByVisit: (orgSlug: string, visitId: string) =>
     apiClient.get<{ account: PatientAccount; charges: BillableCharge[] }>(`${hospitalBase(orgSlug)}/visits/${visitId}/account`),
+  // Sprint 6 — an inpatient admission's own running ledger (GetAccountByVisit's counterpart).
+  getAccountByAdmission: (orgSlug: string, admissionId: string) =>
+    apiClient.get<{ account: PatientAccount; charges: BillableCharge[] }>(`${hospitalBase(orgSlug)}/admissions/${admissionId}/account`),
   listPendingCharges: async (orgSlug: string, department?: string): Promise<BillableCharge[]> => {
     const res = await apiClient.get<{ data: BillableCharge[] }>(`${hospitalBase(orgSlug)}/billing/queue`, department ? { department } : undefined);
     return unwrapList(res);

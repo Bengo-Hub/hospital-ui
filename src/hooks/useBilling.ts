@@ -25,6 +25,15 @@ export function useAccountByVisit(visitId?: string) {
   });
 }
 
+export function useAccountByAdmission(admissionId?: string) {
+  const orgSlug = useOrgSlug();
+  return useQuery({
+    queryKey: ['hospital', 'admission-account', orgSlug, admissionId],
+    queryFn: () => billingApi.getAccountByAdmission(orgSlug, admissionId as string),
+    enabled: !!orgSlug && !!admissionId,
+  });
+}
+
 export function usePendingCharges(department?: string) {
   const orgSlug = useOrgSlug();
   return useQuery({
@@ -44,6 +53,7 @@ export function useCollectCharge() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['hospital', 'billing-queue', orgSlug] });
       qc.invalidateQueries({ queryKey: ['hospital', 'account', orgSlug] });
+      qc.invalidateQueries({ queryKey: ['hospital', 'admission-account', orgSlug] });
     },
   });
 }
@@ -54,7 +64,10 @@ export function useSettleAccount() {
   return useMutation({
     mutationFn: ({ accountId, data }: { accountId: string; data: CollectChargeInput & { next_of_kin_id?: string } }) =>
       billingApi.settleAccount(orgSlug, accountId, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['hospital', 'account', orgSlug] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['hospital', 'account', orgSlug] });
+      qc.invalidateQueries({ queryKey: ['hospital', 'admission-account', orgSlug] });
+    },
   });
 }
 

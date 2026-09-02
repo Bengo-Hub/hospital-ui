@@ -10,7 +10,7 @@ see Sprint 2). OPD queue lives at `/consultation/queue` (Sprint 2 scope, not a s
 ## Pages / Components
 
 - `/[orgSlug]/patients` — searchable patient list + registration form (single-column, per `docs/ux-ui.md`'s clinical-form guidance). Identification-type selector offers National ID / Passport / Birth Certificate / **Maisha Number** / Alien ID, matching the ID types Kenya's own national Client Registry accepts (added 2026-08-29, see `hospital-api/docs/compliance-kenya.md` §6) — not a generic "other" text field.
-- `/[orgSlug]/patients/[id]` — patient detail (visit history).
+- `/[orgSlug]/patients/[id]` — patient detail (visit history). **Note (2026-09-02, planned, not this sprint's scope):** once hospital-api's richer inter-facility `Referral`/new `PatientTransfer` entities exist (see `hospital-api/docs/architecture.md`'s "Referral, Transfer & Ambulance Billing" section), this page should also surface a referral/transfer history section, not just the visit list — noted here so the eventual work has a landing spot, not implemented by this sprint.
 - `/[orgSlug]/triage` — flat (not dynamic-route) triage queue page: lists visits with `status=registered` awaiting vitals, opens a `TriageModal` per visit for vitals capture. Reached via a banner link from `/[orgSlug]/patients`, not a dedicated sidebar entry — `facility-nomenclature.ts` unifies reception/triage/consultation under the single "Patients" sidebar item. There is no separate `/reception/queue` page; the OPD worklist itself lives at `/consultation/queue` (Sprint 2 scope).
 
 ## Data Layer

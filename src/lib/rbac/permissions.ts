@@ -117,12 +117,16 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     P.LAB_VIEW, P.LAB_ADD,
     P.PHARMACY_VIEW, P.PHARMACY_PRESCRIBE,
     P.RECORDS_VIEW,
-    P.INPATIENT_VIEW, P.INPATIENT_CHANGE,
+    // Sprint 6 (2026-09-02): a doctor both admits and discharges/transfers-out (MANAGE — the same
+    // permission ward/bed setup uses, a deliberate simplification, see hospital-api's rbac/seed.go).
+    P.INPATIENT_VIEW, P.INPATIENT_ADD, P.INPATIENT_CHANGE, P.INPATIENT_MANAGE,
     P.BILLING_COLLECT_OWN,
   ],
   nurse: [
     P.TRIAGE_VIEW, P.TRIAGE_ADD, P.TRIAGE_CHANGE, P.TRIAGE_MANAGE,
-    P.INPATIENT_VIEW, P.INPATIENT_CHANGE,
+    // Sprint 6 (2026-09-02): nurses admit + handle intra-facility transfers day-to-day; discharge/
+    // transfer-out (MANAGE) stays doctor/manager-authorized.
+    P.INPATIENT_VIEW, P.INPATIENT_ADD, P.INPATIENT_CHANGE,
     P.CONSULTATION_VIEW,
     P.RECORDS_VIEW,
     P.BILLING_COLLECT_OWN,
@@ -159,7 +163,7 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     P.BILLING_COLLECT_OWN, P.BILLING_COLLECT_ANY, P.BILLING_OVERRIDE_SETTLEMENT, P.BILLING_MANAGE_CATALOG,
     P.RECEPTION_VIEW, P.RECEPTION_ADD, P.RECEPTION_CHANGE, P.RECEPTION_MANAGE,
     P.RECORDS_VIEW, P.RECORDS_CHANGE,
-    P.INPATIENT_VIEW, P.INPATIENT_CHANGE,
+    P.INPATIENT_VIEW, P.INPATIENT_ADD, P.INPATIENT_CHANGE, P.INPATIENT_MANAGE,
     P.THEATRE_VIEW,
     P.USERS_VIEW,
     P.CONFIG_VIEW,

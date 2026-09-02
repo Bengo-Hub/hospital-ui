@@ -10,7 +10,13 @@ examination queue, diagnosis picker via the real `SearchableCombobox`). Deviated
 
 - `/[orgSlug]/consultation/queue` — per-queue-type worklist (doctor/dental/MCH/specialist).
 - `/[orgSlug]/consultation/[visitId]` — examination form (notes, diagnosis picker sourced from
-  the merged global+tenant-custom catalogue, referral-to-lab/pharmacy actions).
+  the merged global+tenant-custom catalogue, referral-to-lab/pharmacy actions). **Note (2026-09-02,
+  planned, not this sprint's scope):** the referral action should eventually branch into two shapes
+  once hospital-api's richer schema exists — an internal referral (lab/pharmacy/specialist) keeps
+  today's simple picker, while "refer to another facility" opens a separate form (receiving facility
+  name/MFL code, a referral-letter/summary text area, a pre-referral-contact-confirmed checkbox, and
+  an optional "book ambulance" action linking to Sprint 9). This sprint ships only the simple picker
+  against the shipped `Referral` shape.
 
 ## Definition of Done
 

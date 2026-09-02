@@ -32,50 +32,54 @@ function isFacilityType(value: unknown): value is FacilityType {
 
 // ── Sidebar module keys ──────────────────────────────────────────────────────────
 //
-// One key per entry in sidebar.tsx's NAV_ITEMS. 'dashboard', 'appointments' and
-// 'admissions' are NOT facility-type-gated (see facilityModulesFor's comment below) —
-// they're still listed here so the sidebar can do a single `visible.has(item.module)`
-// filter instead of special-casing ungated items.
+// One key per entry in sidebar.tsx's NAV_ITEMS. 'dashboard' and 'appointments' are NOT
+// facility-type-gated (see ALWAYS_VISIBLE below) — they're still listed here so the sidebar can
+// do a single `visible.has(item.module)` filter instead of special-casing ungated items.
+// 'inpatient' (Sprint 6, shipped 2026-09-02) IS gated — hidden for Chemist (no Patient/Visit to
+// admit at all), visible Clinic and up.
 export type NavModuleKey =
   | 'dashboard'
   | 'patients'
   | 'appointments'
-  | 'admissions'
+  | 'inpatient'
   | 'laboratory'
   | 'pharmacy'
   | 'billing'
   | 'users'
   | 'config';
 
-// Sprint 1-5 built the backend for these (hospital-api's Patients/Consultation/Lab/
-// Pharmacy/Billing handlers — see internal/http/router/router.go) but hospital-ui has no
-// frontend pages behind them yet (Phase 7). 'appointments' and 'admissions' have NEITHER a
-// backend handler NOR a frontend page (Sprints 6-10) — per this migration's explicit scope,
-// they stay visible-but-comingSoon at EVERY facility type, not gated by facilityModulesFor.
-// 'users'/'config' (2026-08-30) are baseline tenant administration, not a clinical workflow —
-// every facility tier needs staff role management and a config view regardless of size, so
-// they're ungated by facility type too (RBAC permission alone decides visibility for these).
-const ALWAYS_VISIBLE: NavModuleKey[] = ['dashboard', 'appointments', 'admissions', 'users', 'config'];
+// 'appointments' has NEITHER a backend handler NOR a frontend page yet (Sprint 10-ish) — stays
+// visible-but-comingSoon at EVERY facility type, not gated by facilityModulesFor. 'users'/
+// 'config' (2026-08-30) are baseline tenant administration, not a clinical workflow — every
+// facility tier needs staff role management and a config view regardless of size, so they're
+// ungated by facility type too (RBAC permission alone decides visibility for these).
+const ALWAYS_VISIBLE: NavModuleKey[] = ['dashboard', 'appointments', 'users', 'config'];
 
 // Chemist/dispensary: walk-in OTC sale + dispense-against-external-prescription only — no
-// OPD reception/triage/consultation/lab workflow at all (hospClinicalCore vs hospChemistCore
-// in subscriptions-api's plans_hospital.go: a chemist never gets patient_records/triage/
-// consultation/lab_requests_basic features, only pharmacy_dispensing + billing).
+// OPD reception/triage/consultation/lab/inpatient workflow at all (hospClinicalCore vs
+// hospChemistCore in subscriptions-api's plans_hospital.go: a chemist never gets
+// patient_records/triage/consultation/lab_requests_basic/inpatient_module features, only
+// pharmacy_dispensing + billing) — a chemist has no Patient/Visit to admit in the first place.
 const CHEMIST_MODULES: NavModuleKey[] = [...ALWAYS_VISIBLE, 'pharmacy', 'billing'];
 
 // Clinic and above: full OPD workflow (registration/reception/triage/consultation, unified
 // under the "Patients" nav item) plus lab requests (referred-out at Clinic tier, in-house from
-// Facility tier via the in_house_lab/diagnosis_lab_catalogues features) plus pharmacy/billing.
+// Facility tier via the in_house_lab/diagnosis_lab_catalogues features) plus pharmacy/billing,
+// plus inpatient (Sprint 6, shipped 2026-09-02 — Clinic tier only has it via the paid Inpatient
+// add-on, gated by subscriptions-api's inpatient_module feature at the ROUTE level regardless of
+// this nav entry showing; a Clinic tenant without the add-on sees the nav item and gets a real
+// "feature not available" response from the backend, same as every other tier-gated module on
+// this platform — see docs/ux-ui.md, nav visibility is a presentation concern, licensing is a
+// separate gate).
 //
-// Facility and Hospital tiers add real capabilities on top (in-house lab processing, inpatient/
-// admissions, controlled-substance register, multi-cashier billing queue, and — Hospital only —
-// theatre/maternity/multi-branch/etc.) but NONE of them have a dedicated sidebar entry yet:
-// Admissions & Beds has no backend handler at any tier (Sprint 6-10, see ALWAYS_VISIBLE above),
-// and controlled-substance register / multi-cashier are behavior inside the existing Pharmacy /
+// Facility and Hospital tiers add real capabilities on top (in-house lab processing,
+// controlled-substance register, multi-cashier billing queue, and — Hospital only —
+// theatre/maternity/multi-branch/etc.) but most of them have no dedicated sidebar entry yet:
+// controlled-substance register / multi-cashier are behavior inside the existing Pharmacy /
 // Billing pages, not separate nav items. So Clinic, Facility and Hospital currently resolve to
 // the SAME visible nav set — this is intentional, not a bug: extend this list (not collapse it)
 // the day a Facility+-only nav entry actually ships.
-const CLINIC_AND_ABOVE_MODULES: NavModuleKey[] = [...ALWAYS_VISIBLE, 'patients', 'laboratory', 'pharmacy', 'billing'];
+const CLINIC_AND_ABOVE_MODULES: NavModuleKey[] = [...ALWAYS_VISIBLE, 'patients', 'laboratory', 'pharmacy', 'billing', 'inpatient'];
 
 /**
  * Which sidebar modules (by NavModuleKey) are visible for a given facility type. A module NOT

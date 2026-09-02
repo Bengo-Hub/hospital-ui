@@ -144,10 +144,23 @@ export const NAV_ENTRIES: NavEntry[] = [
     ],
   },
 
-  // Neither backend nor frontend exist yet (Sprint 6-10) — stay flat, locked, ungated (always
-  // visible per facility-nomenclature.ts's ALWAYS_VISIBLE).
+  // Neither backend nor frontend exist yet — stays flat, locked, ungated (always visible per
+  // facility-nomenclature.ts's ALWAYS_VISIBLE).
   { label: 'Appointments', icon: ClipboardList, href: '/appointments', module: 'appointments', comingSoon: true },
-  { label: 'Admissions & Beds', icon: Bed, href: '/admissions', module: 'admissions', comingSoon: true },
+
+  // Inpatient (Sprint 6, shipped 2026-09-02): the occupancy board and the admissions worklist are
+  // two distinct real pages under the same module, mirroring Laboratory's Worklist/Catalog split.
+  // Admitting requires INPATIENT_ADD (a doctor/nurse/manager action); the occupancy board is
+  // read-only for anyone holding INPATIENT_VIEW.
+  {
+    label: 'Inpatient',
+    icon: Bed,
+    module: 'inpatient',
+    items: [
+      { label: 'Ward Occupancy', icon: Bed, href: '/wards', permission: P.INPATIENT_VIEW },
+      { label: 'Admissions', icon: ClipboardList, href: '/admissions', permission: P.INPATIENT_VIEW },
+    ],
+  },
 
   // Baseline tenant administration (2026-08-30, expanded same day with role customization/audit
   // log) — available at every facility tier, gated purely by RBAC permission (module is in
