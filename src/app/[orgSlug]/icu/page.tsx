@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Activity, AlertTriangle, CheckCircle2, Loader2, LogOut, Plus, ShieldAlert, X } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle2, Loader2, LogOut, Plus, ShieldAlert, Stethoscope, X } from 'lucide-react';
 import { Card, Button, Badge } from '@/components/ui/base';
 import { PageHeader, EmptyState, Skeleton } from '@/components/ui/page';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -12,6 +12,8 @@ import { apiErrorMessage } from '@/lib/api/error-message';
 import { useAdmissions, useAdmission } from '@/hooks/useInpatient';
 import { usePatient } from '@/hooks/useClinical';
 import { useICUEpisodes, useStartICUEpisode, useUpdateICUEpisode, useEndICUEpisode } from '@/hooks/useICU';
+import { useSetEpisodeEquipment } from '@/hooks/useAssets';
+import { EquipmentPickerModal } from '@/components/assets/equipment-picker-modal';
 import type { ICUEpisode, SeverityFlag } from '@/lib/api/icu';
 
 const SEVERITY_CONFIG: Record<SeverityFlag, { label: string; icon: typeof CheckCircle2; cls: string }> = {
@@ -126,6 +128,8 @@ function EpisodeCard({ episode }: { episode: ICUEpisode }) {
   const updateEpisode = useUpdateICUEpisode();
   const [endTarget, setEndTarget] = useState<ICUEpisode | null>(null);
   const endEpisode = useEndICUEpisode();
+  const setEquipment = useSetEpisodeEquipment();
+  const [equipmentOpen, setEquipmentOpen] = useState(false);
   const cfg = SEVERITY_CONFIG[episode.severity_flag];
   const Icon = cfg.icon;
 
@@ -178,12 +182,20 @@ function EpisodeCard({ episode }: { episode: ICUEpisode }) {
             ))}
           </div>
         </Can>
-        <Can permission={P.ICU_MANAGE}>
-          <Button size="sm" variant="outline" className="w-full gap-1.5" onClick={() => setEndTarget(episode)}>
-            <LogOut className="h-3.5 w-3.5" />
-            End Episode
-          </Button>
-        </Can>
+        <div className="flex gap-1.5">
+          <Can permission={P.ICU_CHANGE}>
+            <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => setEquipmentOpen(true)}>
+              <Stethoscope className="h-3.5 w-3.5" />
+              Equipment{episode.equipment_asset_ids?.length ? ` (${episode.equipment_asset_ids.length})` : ''}
+            </Button>
+          </Can>
+          <Can permission={P.ICU_MANAGE}>
+            <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => setEndTarget(episode)}>
+              <LogOut className="h-3.5 w-3.5" />
+              End Episode
+            </Button>
+          </Can>
+        </div>
       </div>
       <ConfirmDialog
         open={!!endTarget}
@@ -193,6 +205,14 @@ function EpisodeCard({ episode }: { episode: ICUEpisode }) {
         onConfirm={confirmEnd}
         onCancel={() => setEndTarget(null)}
       />
+      {equipmentOpen && (
+        <EquipmentPickerModal
+          title="ICU episode"
+          currentAssetIds={episode.equipment_asset_ids ?? []}
+          onSave={(assetIds) => setEquipment.mutateAsync({ episodeId: episode.id, assetIds })}
+          onClose={() => setEquipmentOpen(false)}
+        />
+      )}
     </Card>
   );
 }

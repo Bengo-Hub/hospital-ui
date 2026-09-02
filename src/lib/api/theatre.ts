@@ -20,6 +20,8 @@ export interface TheatreBooking {
   status: TheatreBookingStatus;
   checklist: Record<string, boolean>;
   fee_amount?: number;
+  /** inventory-api Asset IDs reserved for this booking (e.g. an anaesthesia machine) — reference only. */
+  equipment_asset_ids?: string[];
   created_by?: string;
   started_at?: string;
   completed_at?: string;

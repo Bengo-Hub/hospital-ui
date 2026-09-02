@@ -10,6 +10,7 @@ import {
   Play,
   Plus,
   Scissors,
+  Stethoscope,
   X,
   XCircle,
   Zap,
@@ -21,6 +22,8 @@ import { Can } from '@/components/auth/can';
 import { P } from '@/lib/rbac/permissions';
 import { apiErrorMessage } from '@/lib/api/error-message';
 import { useVisits } from '@/hooks/useClinical';
+import { useSetBookingEquipment } from '@/hooks/useAssets';
+import { EquipmentPickerModal } from '@/components/assets/equipment-picker-modal';
 import {
   useTheatreSchedule,
   useCreateBooking,
@@ -219,12 +222,14 @@ export default function TheatreSchedulePage() {
   const { data: bookings, isLoading } = useTheatreSchedule(date || undefined);
   const [newOpen, setNewOpen] = useState(false);
   const [checklistBooking, setChecklistBooking] = useState<TheatreBooking | null>(null);
+  const [equipmentBooking, setEquipmentBooking] = useState<TheatreBooking | null>(null);
   const [cancelTarget, setCancelTarget] = useState<TheatreBooking | null>(null);
 
   const activate = useActivateBooking();
   const start = useStartSurgery();
   const complete = useCompleteSurgery();
   const cancel = useCancelBooking();
+  const setEquipment = useSetBookingEquipment();
 
   const rows = useMemo(() => bookings ?? [], [bookings]);
 
@@ -362,6 +367,14 @@ export default function TheatreSchedulePage() {
                               </Button>
                             </Can>
                           )}
+                          {b.status !== 'cancelled' && (
+                            <Can permission={P.THEATRE_CHANGE}>
+                              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setEquipmentBooking(b)}>
+                                <Stethoscope className="h-3.5 w-3.5" />
+                                Equipment
+                              </Button>
+                            </Can>
+                          )}
                           {(b.status === 'scheduled' || b.status === 'awaiting_payment') && (
                             <Can permission={P.THEATRE_MANAGE}>
                               <Button
@@ -388,6 +401,14 @@ export default function TheatreSchedulePage() {
 
       {newOpen && <NewBookingModal onClose={() => setNewOpen(false)} />}
       {checklistBooking && <ChecklistModal booking={checklistBooking} onClose={() => setChecklistBooking(null)} />}
+      {equipmentBooking && (
+        <EquipmentPickerModal
+          title={`${equipmentBooking.surgery_type} — ${equipmentBooking.theatre_room}`}
+          currentAssetIds={equipmentBooking.equipment_asset_ids ?? []}
+          onSave={(assetIds) => setEquipment.mutateAsync({ bookingId: equipmentBooking.id, assetIds })}
+          onClose={() => setEquipmentBooking(null)}
+        />
+      )}
       <ConfirmDialog
         open={!!cancelTarget}
         title="Cancel this booking?"

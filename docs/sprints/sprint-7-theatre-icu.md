@@ -44,6 +44,43 @@
 - [ ] A real authenticated browser click-through — not done this pass, flagged rather than
       silently skipped (same gap as Sprint 6).
 
+## Gap audit — UI implications (2026-09-02, later the same day)
+
+`hospital-api/docs/sprints/sprint-7-theatre-icu.md` gained a matching "Gap audit and Sprint 7.1
+candidates" section after a client review flagged missing Theatre sub-modules. **Everything below is
+a UI-side implication of that backend proposal — none of it is built, and it depends on the
+corresponding backend fields shipping first.**
+
+- **WHO-checklist-shaped pre-op checklist.** The pre-op checklist modal's current flat list (consent
+  signed, site marked, anaesthesia reviewed, blood availability, equipment ready) is replaced by the
+  real WHO Surgical Safety Checklist's three phases — **Sign In** (before induction of anaesthesia),
+  **Time Out** (before skin incision), **Sign Out** (before the patient leaves the operating room) —
+  each rendered as its own sub-section matching the real point in the case where it's actually run,
+  not one flat checklist filled in all at once. Verbatim item text and sourcing:
+  `hospital-api/docs/sprints/sprint-7-theatre-icu.md`'s gap audit. The schema stays a free-form JSON
+  map (per `docs/ux-ui.md`'s existing conventions and this backend's own "additive metadata"
+  preference), so a tenant can still add/remove items — this is a default content change, not a
+  rigid new form.
+- **Team-assignment picker.** If `theatre_staff_assignment` ships, the "Schedule Surgery" modal's
+  single surgeon field is joined by a multi-role team picker (assistant surgeon(s), anaesthetist,
+  scrub nurse, circulating nurse), each a staff-user select scoped to a sensible role
+  (doctor-role users for surgeon/assistant/anaesthetist, nurse-role users for scrub/circulating).
+  The existing surgeon field stays as the "primary surgeon" the schedule list already displays.
+- **PACU board.** If `pacu_stay` ships, a new `/theatre/pacu` (or similar) card-grid page — the same
+  visual pattern as `/icu`'s severity board — tracks patients currently in recovery, with a
+  disposition action (to ward / to ICU / home) that, for "to ICU," opens the existing "Start ICU
+  Episode" flow rather than duplicating it.
+- **Operative-notes form.** If `operative_note` ships, a "Complete" action on a booking (currently a
+  single status transition) gains a follow-on structured form (procedure performed, findings,
+  complications, estimated blood loss, implants used, specimens sent, post-op diagnosis) — authored
+  after the fact, not blocking the `in_progress → completed` transition itself.
+- **Equipment-linkage picker — shipped 2026-09-02, same day.** The shared `EquipmentPickerModal`
+  is reused as an "Equipment" row action on `/theatre/schedule`'s bookings table and as an
+  "Equipment" button on each `/icu` episode card — not folded into the Schedule Surgery modal
+  itself, since equipment is typically confirmed closer to the actual case than at initial
+  scheduling. Backed by `theatre_booking.equipment_asset_ids`/`icu_episode.equipment_asset_ids`
+  (JSON arrays, not single fields).
+
 ## Next Sprint
 
 Sprint 8 — Blood Bank & Transfusion.

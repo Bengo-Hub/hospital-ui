@@ -84,3 +84,29 @@ Billing & Patient Accounts" section for the design rationale.
 ## Next Sprint
 
 Sprint 6 — Inpatient (ward/bed occupancy board; discharge flow gains the balance-settlement block).
+
+## Gap audit and MVP backlog candidates (2026-09-02)
+
+UI-side mirror of the completeness audit in `hospital-api/docs/sprints/
+sprint-5-billing-insurance.md`'s own "Gap audit" section, read that first for the full backend
+detail and research citations. All items below are **proposed, not yet built**, except the last,
+which documents an already-correct behaviour needing no UI change.
+
+- **Admission deposit collection**: once the backend's proposed `ADMISSION_DEPOSIT` catalog item
+  and `Admission.insurance_guarantee_reference` field ship, the Admit modal (`/admissions`, Sprint
+  6's own page) needs a deposit-amount display and, for the insured path, a field to record the
+  guarantee/undertaking reference, rather than admitting straight to a zero-balance account as it
+  does today.
+- **Receipt / invoice download**: once a `receipt.pdf`-style endpoint exists backend-side, the
+  patient account ledger (`/patients/[id]/account`) and the billing queue's per-charge collect
+  action should both gain a "Download receipt" link, the first place in hospital-ui a patient/
+  cashier could get a printed document out of this system at all.
+- **Refund / credit-note action**: once `billing.Service.IssueRefund` ships, the account ledger
+  needs a per-charge "Issue refund" action (gated on whatever permission the backend settles on),
+  most naturally living next to the existing per-charge Collect action on `PatientAccountLedger`.
+- **Price-list versioning, no UI change needed**: confirmed backend-side that an already-open
+  account keeps its charges' original snapshotted price even after a catalog price update; nothing
+  in `/billing/settings`'s catalog editor needs to change, noted here only for completeness.
+
+See `hospital-api/docs/mvp-gap-backlog-2026-09-02.md` for this item's place in the full
+sprint-by-sprint backlog.

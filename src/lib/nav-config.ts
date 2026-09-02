@@ -190,6 +190,19 @@ export const NAV_ENTRIES: NavEntry[] = [
     permission: P.ICU_VIEW,
   },
 
+  // Biomedical Equipment (2026-09-02, gap-fill — brought forward from Sprint 9): a read-only
+  // proxy over inventory-api's fixed-asset register, linkable to beds/theatre bookings/ICU
+  // episodes. Visible wherever Inpatient is (Clinic tier and up), not gated to Hospital tier like
+  // Theatre/ICU above. Gated on ANY of the three modules that would plausibly link equipment,
+  // matching the backend route's own OR-permission shape.
+  {
+    label: 'Biomedical Equipment',
+    icon: Stethoscope,
+    href: '/assets',
+    module: 'assets',
+    permission: [P.INPATIENT_VIEW, P.THEATRE_VIEW, P.ICU_VIEW],
+  },
+
   // Baseline tenant administration (2026-08-30, expanded same day with role customization/audit
   // log) — available at every facility tier, gated purely by RBAC permission (module is in
   // ALWAYS_VISIBLE, so facilityModulesFor never hides these). Roles requires only USERS_VIEW

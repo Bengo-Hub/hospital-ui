@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Bed as BedIcon, Building2, CheckCircle2, Loader2, Plus, Sparkles, User, Wrench, X } from 'lucide-react';
+import { Bed as BedIcon, Building2, CheckCircle2, Loader2, Plus, Sparkles, Stethoscope, User, Wrench, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, Button, Input } from '@/components/ui/base';
 import { PageHeader, EmptyState, Skeleton } from '@/components/ui/page';
@@ -10,6 +10,8 @@ import { Can } from '@/components/auth/can';
 import { P } from '@/lib/rbac/permissions';
 import { apiErrorMessage } from '@/lib/api/error-message';
 import { useWards, useWardOccupancy, useCreateWard, useCreateBed, useSetBedStatus } from '@/hooks/useInpatient';
+import { useSetBedEquipment } from '@/hooks/useAssets';
+import { EquipmentPickerModal } from '@/components/assets/equipment-picker-modal';
 import type { BedOccupancy, BedStatus } from '@/lib/api/inpatient';
 
 const BED_STATUS_CONFIG: Record<BedStatus, { label: string; icon: typeof CheckCircle2; cls: string }> = {
@@ -26,6 +28,9 @@ function BedTile({ row }: { row: BedOccupancy }) {
   const cfg = BED_STATUS_CONFIG[row.bed.status];
   const Icon = cfg.icon;
   const setStatus = useSetBedStatus();
+  const setEquipment = useSetBedEquipment();
+  const [equipmentOpen, setEquipmentOpen] = useState(false);
+  const equipmentCount = row.bed.equipment_asset_ids?.length ?? 0;
 
   const handleCycle = async () => {
     // Housekeeping cycle only — occupied beds are never touched here (Admit/Discharge own that).
@@ -42,24 +47,48 @@ function BedTile({ row }: { row: BedOccupancy }) {
   };
 
   return (
-    <button
-      type="button"
-      onClick={handleCycle}
-      disabled={row.bed.status === 'out_of_service' || setStatus.isPending}
-      className={`rounded-xl border p-3 text-left transition-colors hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 ${cfg.cls}`}
-      title={row.bed.status === 'occupied' ? 'View admission' : 'Click to cycle housekeeping status'}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-bold text-sm">{row.bed.bed_number}</span>
-        <Icon className="h-4 w-4 shrink-0" />
-      </div>
-      <p className="text-xs font-medium mt-1">{cfg.label}</p>
-      {row.admission && (
-        <p className="text-xs mt-1 truncate opacity-90">
-          {row.patient_name ?? 'Patient'} {row.patient_mrn ? `· ${row.patient_mrn}` : ''}
-        </p>
+    <div className={`relative rounded-xl border p-3 transition-colors ${cfg.cls}`}>
+      <button
+        type="button"
+        onClick={handleCycle}
+        disabled={row.bed.status === 'out_of_service' || setStatus.isPending}
+        className="w-full text-left hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70"
+        title={row.bed.status === 'occupied' ? 'View admission' : 'Click to cycle housekeeping status'}
+      >
+        <div className="flex items-center justify-between gap-2 pr-6">
+          <span className="font-bold text-sm">{row.bed.bed_number}</span>
+          <Icon className="h-4 w-4 shrink-0" />
+        </div>
+        <p className="text-xs font-medium mt-1">{cfg.label}</p>
+        {row.admission && (
+          <p className="text-xs mt-1 truncate opacity-90">
+            {row.patient_name ?? 'Patient'} {row.patient_mrn ? `· ${row.patient_mrn}` : ''}
+          </p>
+        )}
+        {equipmentCount > 0 && <p className="text-xs mt-1 opacity-75">{equipmentCount} equipment linked</p>}
+      </button>
+      <Can permission={P.INPATIENT_MANAGE}>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setEquipmentOpen(true);
+          }}
+          className="absolute top-2 right-2 h-6 w-6 rounded-lg flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/10"
+          title="Linked equipment"
+        >
+          <Stethoscope className="h-3.5 w-3.5" />
+        </button>
+      </Can>
+      {equipmentOpen && (
+        <EquipmentPickerModal
+          title={`Bed ${row.bed.bed_number}`}
+          currentAssetIds={row.bed.equipment_asset_ids ?? []}
+          onSave={(assetIds) => setEquipment.mutateAsync({ bedId: row.bed.id, assetIds })}
+          onClose={() => setEquipmentOpen(false)}
+        />
       )}
-    </button>
+    </div>
   );
 }
 

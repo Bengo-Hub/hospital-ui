@@ -29,3 +29,30 @@ examination queue, diagnosis picker via the real `SearchableCombobox`). Deviated
 ## Next Sprint
 
 Sprint 3 — Laboratory.
+
+## Gap audit and MVP backlog candidates (2026-09-02)
+
+UI-side mirror of the completeness audit in `hospital-api/docs/sprints/
+sprint-2-consultation-examination.md`'s own "Gap audit" section, read that first for the full
+backend detail and research citations. All items below are **proposed, not yet built**.
+
+- **Recheck-vitals action**: `/consultation/[visitId]`'s examination form should gain a "Recheck
+  vitals" button that opens the existing `TriageModal` (already built for Sprint 1) inline, rather
+  than requiring the clinician to navigate away to `/triage`. No new component needed, just a new
+  entry point into an existing one. The backend already supports re-triage on any pre-terminal
+  visit.
+- **Structured review-of-systems / physical exam fields**: once `ExaminationRecord` gains the
+  proposed `review_of_systems`/`physical_exam_findings` JSON fields, the examination form needs a
+  genuinely new structured section (a per-body-system findings grid), not just a bigger textarea.
+  This is the larger half of that backend proposal, flagged here so it isn't underestimated as a
+  simple form-field add.
+- **Diagnosis history**: if `diagnosis_history` ships, the examination form's diagnosis picker
+  should show a small "previously: X, changed to Y" trail rather than silently overwriting, so a
+  clinician reopening a case after lab results return can see what the original working diagnosis
+  was.
+- **Treatment plan field**: a plain textarea for the proposed `treatment_plan` field, distinct from
+  the existing free-text `notes` field, for the common "advice given, no referral" outcome that
+  currently has nowhere to go except an undifferentiated note.
+
+See `hospital-api/docs/mvp-gap-backlog-2026-09-02.md` for this item's place in the full
+sprint-by-sprint backlog.

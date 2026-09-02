@@ -26,6 +26,8 @@ export interface Bed {
   ward_id: string;
   bed_number: string;
   status: BedStatus;
+  /** inventory-api Asset IDs linked to this bed (e.g. a bed-mounted monitor) — reference only. */
+  equipment_asset_ids?: string[];
   created_at: string;
 }
 

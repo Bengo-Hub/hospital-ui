@@ -13,6 +13,8 @@ export interface ICUEpisode {
   bed_id: string;
   severity_flag: SeverityFlag;
   monitoring_notes?: string;
+  /** inventory-api Asset IDs linked to this episode (e.g. a ventilator) — reference only. */
+  equipment_asset_ids?: string[];
   started_by?: string;
   started_at: string;
   ended_at?: string;

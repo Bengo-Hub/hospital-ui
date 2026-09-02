@@ -61,6 +61,36 @@ a modal on `/laboratory`, not a `/laboratory/new` route), not a scope reduction.
 - [ ] A real authenticated browser click-through (admit → transfer → discharge against live
       demo-tenant data) — not done this pass, flagged rather than silently skipped.
 
+## Gap audit — UI implications (2026-09-02, later the same day)
+
+`hospital-api/docs/sprints/sprint-6-inpatient.md` gained a matching "Gap audit and Sprint 6.1
+candidates" section after a client review flagged missing IPD sub-modules. **Everything below is a
+UI-side implication of that backend proposal — none of it is built, and it depends on the
+corresponding backend fields shipping first.**
+
+- **Ward/bed-type picker.** Once `ward.ward_type` exists, the "New Ward" form gains a type select
+  (General/Private/Semi-Private/Isolation/ICU) that suggests a default `billable_item_code`, still
+  overridable — same pattern the form already uses for any other tenant-configurable default.
+- **Isolation-precaution flag on bed tiles.** Once `bed.isolation_precaution` exists, the `/wards`
+  occupancy board's bed tiles gain a 4th visual state (in addition to available/occupied/cleaning/
+  out_of_service) — color **+ icon + text**, per `docs/ux-ui.md`'s "never color alone" rule, not an
+  overloaded reuse of the existing status coding.
+- **Structured discharge-summary form.** The Discharge modal's single free-text `discharge_summary`
+  textarea becomes a short structured form (discharge diagnosis, procedures performed, discharge
+  medications, follow-up instructions, condition-at-discharge select) with the existing free-text
+  field kept as an "additional notes" area — additive to the modal, not a redesign of the
+  Transfer/Discharge flow itself.
+- **Nursing vitals / ward-round tab.** If `vitals_chart_entry`/`ward_round_note` ship, the admission
+  detail page gains a new tab or section (alongside the existing `AdmissionChargesPanel`) showing the
+  vitals time series and round notes chronologically — a nurse-facing quick-entry form for vitals,
+  a doctor-facing quick-entry form for round notes, gated on their respective permissions.
+- **Equipment-linkage picker — shipped 2026-09-02, same day.** A shared `EquipmentPickerModal`
+  (`components/assets/equipment-picker-modal.tsx`) is reused on the `/wards` board's bed tiles (a
+  small Stethoscope icon-button overlaid on each tile, gated `INPATIENT_MANAGE`), sourced from a
+  new read-only `/assets` "Biomedical Equipment" page. See hospital-api's
+  `docs/architecture.md`'s Asset Integration section for the backend side
+  (`Bed.equipment_asset_ids`, a JSON array, not a single field).
+
 ## Next Sprint
 
 Sprint 7 — Theatre/OT scheduling + ICU monitoring board.

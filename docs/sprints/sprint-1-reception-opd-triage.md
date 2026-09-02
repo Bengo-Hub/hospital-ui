@@ -26,3 +26,40 @@ see Sprint 2). OPD queue lives at `/consultation/queue` (Sprint 2 scope, not a s
 ## Next Sprint
 
 Sprint 2 — Consultation & Examination.
+
+## Gap audit and MVP backlog candidates (2026-09-02)
+
+UI-side mirror of the completeness audit in `hospital-api/docs/sprints/
+sprint-1-patient-opd-triage.md`'s own "Gap audit" section, read that first for the full backend
+detail and research citations. All items below are **proposed, not yet built**.
+
+**Doc-drift correction, found by this audit**: this doc's own Pages/Components section above
+claims the patient registration form has an "Identification-type selector... Maisha Number..."
+option. It does not. `patients/page.tsx`'s own `RegisterPatientModal` has one plain text `id_number`
+input, and the page's own top-of-file comment already flags this exact drift ("that doc
+additionally describes a Kenya ID-type selector and a separate `/patients/[id]` detail page;
+neither exists in `RegisterPatientInput`/`Patient`... yet"). Fixing the doc's own claim here: the
+selector does not exist today.
+
+- **Identification-type selector**: add once `hospital-api` ships the proposed
+  `identification_type` enum field, a dropdown next to the existing ID-number input
+  (national_id/passport/birth_certificate/maisha_number/alien_id).
+- **SHA/SHIF beneficiary number field**: add to the registration form once the backend field ships,
+  so it's captured once instead of retyped at every insurance eligibility check.
+- **Patient photo capture**: a simple image-upload step in `RegisterPatientModal`, once
+  `Patient.photo_url` ships backend-side. Fingerprint biometric capture is explicitly out of scope
+  for hospital-ui (a hardware/SHA-API integration, not a frontend form field). See the api doc's
+  own note on this.
+- **Possible-duplicate warning**: the registration form should surface a non-blocking "a patient
+  matching this name/phone/ID already exists. Continue anyway?" prompt once the backend's
+  pre-save duplicate check exists (proposed in the api doc). A pure UX addition, no new UI page.
+- **OPD queue acuity ordering**: `/consultation/queue` (Sprint 2's page, this sprint's own worklist
+  concept lives there per this doc's own note above) should show a priority badge and reflect
+  urgent-first ordering once `patients.Service.ListVisits` returns triage-priority-sorted results.
+  Currently the queue is pure FIFO by check-in time, with no visual acuity signal at all even though
+  `TriageRecord.priority` is captured.
+- **Appointments**: confirmed still `comingSoon: true` in `lib/nav-config.ts` with zero backend.
+  No change needed here, already tracked, not re-researched this pass.
+
+See `hospital-api/docs/mvp-gap-backlog-2026-09-02.md` for this item's place in the full
+sprint-by-sprint backlog.

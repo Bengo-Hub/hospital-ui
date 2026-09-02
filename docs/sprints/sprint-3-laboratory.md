@@ -34,3 +34,24 @@ resulted yet.
 ## Next Sprint
 
 Sprint 4 — Pharmacy & Dispensing terminal.
+
+## Gap audit and MVP backlog candidates (2026-09-02)
+
+UI-side mirror of the completeness audit in `hospital-api/docs/sprints/sprint-3-laboratory.md`'s
+own "Gap audit" section, read that first for the full backend detail and research citations. Both
+items below are **proposed, not yet built**.
+
+- **Specimen collection step**: `/lab/orders/[id]` (or the worklist itself) should gain a "Mark
+  specimen collected" action, capturing who collected it and (ideally) a scanned/typed specimen ID,
+  once the backend's proposed `specimen_collected_at`/`specimen_collected_by`/`specimen_id` fields
+  ship. Result entry should visually distinguish "not yet collected" from "collected, awaiting
+  result" rather than the current single `requested`→`resulted` jump.
+- **Critical-result visual escalation**: today a `critical`-flagged result shows the same as any
+  other flag on the worklist (a badge, per this doc's own screen). Once the backend publishes a
+  distinct `hospital.lab_order.critical_result` event, the worklist/result-entry UI should surface
+  a genuinely different visual treatment for a critical result (not color alone, per `docs/
+  ux-ui.md`'s own rule), e.g. a persistent banner rather than a quiet badge, since the whole point
+  of the backend change is that a critical result must not blend in with routine ones.
+
+See `hospital-api/docs/mvp-gap-backlog-2026-09-02.md` for this item's place in the full
+sprint-by-sprint backlog.

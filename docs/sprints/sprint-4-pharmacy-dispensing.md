@@ -31,3 +31,28 @@ separate pharmacy-page variant.
 ## Next Sprint
 
 Sprint 5 — Billing & Insurance.
+
+## Gap audit and MVP backlog candidates (2026-09-02)
+
+UI-side mirror of the completeness audit in `hospital-api/docs/sprints/
+sprint-4-pharmacy-dispensing.md`'s own "Gap audit" section, read that first for the full backend
+detail and research citations. All items below are **proposed, not yet built**.
+
+- **Medication Administration Record screen**: once the backend's proposed `MedicationAdministration`
+  entity ships, this needs a genuinely new nurse-facing page, most naturally hung off the admission
+  detail page (`/admissions/[admissionId]`, Sprint 6's own page) rather than anywhere in this
+  sprint's own pharmacy UI, since MAR is a nursing-charting concept tied to an admission, not to the
+  pharmacist's dispense screen. The backend proposal lives in this sprint's module, but the actual
+  UI home is Sprint 6's page, noted so whoever builds it doesn't add a redundant pharmacy-side
+  screen.
+- **Refill action**: `/pharmacy/[prescriptionId]` (or the prescription list) should gain a "Create
+  refill" action once `Prescription.repeat_of_prescription_id` and `CreateRefill` ship, pre-filling
+  a new prescription from the original's lines rather than requiring the prescriber to re-type a
+  chronic patient's regular regimen.
+- **Allergy-recheck wiring is backend-only**: the proposed automatic recheck on `Patient.allergy_
+  flags` change requires no hospital-ui change, it is a backend-side wiring fix
+  (`patients.Service.UpdatePatient` calling the already-built `pharmacy.Service.
+  RecheckInteractions`). Noted here only so this item isn't mistakenly picked up as a frontend task.
+
+See `hospital-api/docs/mvp-gap-backlog-2026-09-02.md` for this item's place in the full
+sprint-by-sprint backlog.

@@ -50,6 +50,7 @@ export type NavModuleKey =
   | 'billing'
   | 'theatre'
   | 'icu'
+  | 'assets'
   | 'users'
   | 'config';
 
@@ -84,7 +85,10 @@ const CHEMIST_MODULES: NavModuleKey[] = [...ALWAYS_VISIBLE, 'pharmacy', 'billing
 // Billing pages, not separate nav items. So Clinic, Facility and Hospital currently resolve to
 // the SAME visible nav set — this is intentional, not a bug: extend this list (not collapse it)
 // the day a Facility+-only nav entry actually ships.
-const CLINIC_AND_ABOVE_MODULES: NavModuleKey[] = [...ALWAYS_VISIBLE, 'patients', 'laboratory', 'pharmacy', 'billing', 'inpatient'];
+// 'assets' (2026-09-02, Biomedical Equipment integration brought forward from Sprint 9): visible
+// alongside 'inpatient' since equipment linkage (a bed-mounted monitor, etc.) is relevant from the
+// same tier inpatient beds exist at, not gated Hospital-only like Theatre/ICU below.
+const CLINIC_AND_ABOVE_MODULES: NavModuleKey[] = [...ALWAYS_VISIBLE, 'patients', 'laboratory', 'pharmacy', 'billing', 'inpatient', 'assets'];
 
 // Hospital tier only (Sprint 7, shipped 2026-09-02): Theatre/OT scheduling + ICU critical-care
 // monitoring, gated by subscriptions-api's real plan matrix (`theatre_module` is granted
