@@ -132,6 +132,9 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     P.BILLING_VIEW,
     P.BILLING_COLLECT_OWN,
   ],
+  lab_technician: [
+    P.LAB_VIEW, P.LAB_ADD, P.LAB_CHANGE,
+  ],
   records_clerk: [
     P.RECORDS_VIEW, P.RECORDS_ADD, P.RECORDS_CHANGE, P.RECORDS_MANAGE,
     P.RECEPTION_VIEW, P.RECEPTION_ADD, P.RECEPTION_CHANGE, P.RECEPTION_MANAGE,

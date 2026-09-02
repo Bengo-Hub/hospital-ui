@@ -166,7 +166,7 @@ function PatientRow({ patient, orgSlug, onOpenVisit, pending }: { patient: Patie
           >
             View
           </Link>
-          <Can permission="hospital.records.add">
+          <Can permission="hospital.reception.add">
             <button
               onClick={() => onOpenVisit(patient.id)}
               disabled={pending}

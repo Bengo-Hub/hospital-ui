@@ -348,7 +348,7 @@ function PatientAccountLedger({ visitId, showSettlementActions }: { visitId: str
         actions={
           showSettlementActions ? (
             <>
-              <Can permission="hospital.billing.collect_any">
+              <Can permission={['hospital.billing.collect_own', 'hospital.billing.collect_any']}>
                 <Button variant="secondary" className="gap-2" onClick={() => setSettleOpen(true)} disabled={account.status !== 'open'}>
                   <Wallet className="h-4 w-4" />
                   Settle Account

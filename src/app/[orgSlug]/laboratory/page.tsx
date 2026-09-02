@@ -481,7 +481,7 @@ export default function LaboratoryPage() {
                       <div className="flex items-center justify-end gap-2">
                         {o.status === 'awaiting_payment' && (
                           <>
-                            <Can permission="hospital.lab.change">
+                            <Can permission={['hospital.billing.collect_own', 'hospital.billing.collect_any']}>
                               <Button
                                 size="sm"
                                 variant="secondary"
