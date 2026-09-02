@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Banknote, ChevronDown, ChevronUp, FlaskConical, Loader2, Plus, ShieldCheck, XCircle, Zap, X } from 'lucide-react';
+import { AlertTriangle, Banknote, ChevronDown, ChevronUp, FlaskConical, Loader2, Plus, ShieldCheck, TestTube2, XCircle, Zap, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, Button, Badge, Input } from '@/components/ui/base';
 import { PageHeader, EmptyState, Skeleton } from '@/components/ui/page';
@@ -18,6 +18,7 @@ import {
   useCreateLabOrder,
   useActivateLabOrder,
   useCancelLabOrder,
+  useCollectSpecimen,
   useEnterLabResult,
   useSubmitLabInsuranceClaim,
 } from '@/hooks/useLab';
@@ -225,7 +226,25 @@ interface ResultDraft {
 function ResultsModal({ order, onClose }: { order: LabOrder; onClose: () => void }) {
   const { data, isLoading } = useLabOrder(order.id);
   const enterResult = useEnterLabResult();
+  const collectSpecimen = useCollectSpecimen();
   const [values, setValues] = useState<Record<string, ResultDraft>>({});
+  const [collectingLineId, setCollectingLineId] = useState<string | null>(null);
+
+  const handleCollect = async (lineId: string) => {
+    setCollectingLineId(lineId);
+    try {
+      await collectSpecimen.mutateAsync({ lineId });
+      toast.success('Specimen marked collected');
+    } catch (e) {
+      toast.error(await apiErrorMessage(e, 'Failed to record specimen collection'));
+    } finally {
+      setCollectingLineId(null);
+    }
+  };
+
+  const anyCritical = (data?.lines ?? []).some(
+    (l) => l.flag === 'critical' || values[l.id]?.flag === 'critical',
+  );
 
   useEffect(() => {
     if (!data?.lines) return;
@@ -292,6 +311,14 @@ function ResultsModal({ order, onClose }: { order: LabOrder; onClose: () => void
           </button>
         </div>
         <div className="p-6 space-y-4 overflow-y-auto">
+          {anyCritical && (
+            <div className="rounded-xl border-2 border-destructive bg-destructive/10 px-4 py-3 flex items-center gap-2.5">
+              <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+              <p className="text-sm font-bold text-destructive">
+                Critical result on this order — the ordering clinician is alerted urgently on submit.
+              </p>
+            </div>
+          )}
           {isLoading ? (
             <div className="flex items-center justify-center h-24 gap-3">
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -300,42 +327,78 @@ function ResultsModal({ order, onClose }: { order: LabOrder; onClose: () => void
           ) : (data?.lines ?? []).length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">No test lines on this order</p>
           ) : (
-            (data?.lines ?? []).map((l) => (
-              <div key={l.id} className="rounded-xl border border-border bg-background/50 p-3 space-y-2">
+            (data?.lines ?? []).map((l) => {
+              const collected = !!l.specimen_collected_at;
+              return (
+              <div
+                key={l.id}
+                className={`rounded-xl border p-3 space-y-2 ${l.flag === 'critical' ? 'border-destructive bg-destructive/5' : 'border-border bg-background/50'}`}
+              >
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-bold">
                     {l.test_name} <span className="text-xs text-muted-foreground font-normal font-mono">{l.test_code}</span>
                   </p>
-                  {l.flag !== 'pending' && <LabFlagBadge flag={l.flag} />}
+                  <div className="flex items-center gap-2">
+                    {l.flag === 'critical' && (
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-destructive">
+                        <AlertTriangle className="h-3.5 w-3.5" /> CRITICAL
+                      </span>
+                    )}
+                    {l.flag !== 'pending' && l.flag !== 'critical' && <LabFlagBadge flag={l.flag} />}
+                  </div>
                 </div>
+                {collected ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    Specimen collected {new Date(l.specimen_collected_at!).toLocaleString()}
+                    {l.specimen_id ? ` — ID ${l.specimen_id}` : ''}
+                  </p>
+                ) : (
+                  <div className="flex items-center justify-between rounded-lg border border-dashed border-border px-3 py-2">
+                    <span className="text-xs text-muted-foreground">Not yet collected — result entry is locked until collection</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 shrink-0"
+                      onClick={() => handleCollect(l.id)}
+                      disabled={collectingLineId === l.id}
+                    >
+                      {collectingLineId === l.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <TestTube2 className="h-3.5 w-3.5" />}
+                      Mark collected
+                    </Button>
+                  </div>
+                )}
                 <div className="grid grid-cols-3 gap-2">
                   <input
                     placeholder="Result"
                     value={values[l.id]?.result_value ?? ''}
                     onChange={(e) => setField(l.id, 'result_value', e.target.value)}
-                    className={inputCls}
+                    disabled={!collected}
+                    className={`${inputCls} disabled:opacity-50 disabled:cursor-not-allowed`}
                   />
                   <input
                     placeholder="Unit"
                     value={values[l.id]?.unit ?? ''}
                     onChange={(e) => setField(l.id, 'unit', e.target.value)}
-                    className={inputCls}
+                    disabled={!collected}
+                    className={`${inputCls} disabled:opacity-50 disabled:cursor-not-allowed`}
                   />
                   <input
                     placeholder="Reference range"
                     value={values[l.id]?.reference_range ?? ''}
                     onChange={(e) => setField(l.id, 'reference_range', e.target.value)}
-                    className={inputCls}
+                    disabled={!collected}
+                    className={`${inputCls} disabled:opacity-50 disabled:cursor-not-allowed`}
                   />
                 </div>
                 <div className="flex gap-3">
                   {FLAGS.map((f) => (
-                    <label key={f.value} className={`text-xs font-medium flex items-center gap-1 ${f.cls}`}>
+                    <label key={f.value} className={`text-xs font-medium flex items-center gap-1 ${f.cls} ${!collected ? 'opacity-50' : ''}`}>
                       <input
                         type="radio"
                         name={`flag-${l.id}`}
                         checked={values[l.id]?.flag === f.value}
                         onChange={() => setField(l.id, 'flag', f.value)}
+                        disabled={!collected}
                       />
                       {f.label}
                     </label>
@@ -345,10 +408,12 @@ function ResultsModal({ order, onClose }: { order: LabOrder; onClose: () => void
                   placeholder="Notes (optional)"
                   value={values[l.id]?.notes ?? ''}
                   onChange={(e) => setField(l.id, 'notes', e.target.value)}
-                  className={inputCls}
+                  disabled={!collected}
+                  className={`${inputCls} disabled:opacity-50 disabled:cursor-not-allowed`}
                 />
               </div>
-            ))
+              );
+            })
           )}
         </div>
         <div className="flex gap-3 px-6 pb-6 pt-2 border-t border-border shrink-0">

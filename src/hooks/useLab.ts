@@ -62,6 +62,16 @@ export function useActivateLabOrder() {
   });
 }
 
+export function useCollectSpecimen() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ lineId, specimenId }: { lineId: string; specimenId?: string }) =>
+      labApi.collectSpecimen(orgSlug, lineId, specimenId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hospital', 'lab-orders', orgSlug] }),
+  });
+}
+
 export function useEnterLabResult() {
   const orgSlug = useOrgSlug();
   const qc = useQueryClient();

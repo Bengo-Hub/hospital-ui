@@ -29,6 +29,9 @@ export interface LabOrderLine {
   test_name: string;
   price: number;
   specimen_type?: string;
+  specimen_collected_at?: string;
+  specimen_collected_by?: string;
+  specimen_id?: string;
   result_value?: string;
   unit?: string;
   reference_range?: string;
@@ -109,6 +112,8 @@ export const labApi = {
     apiClient.post<LabOrder>(`${hospitalBase(orgSlug)}/lab-orders/${orderId}/activate`),
   cancelOrder: (orgSlug: string, orderId: string, reason?: string) =>
     apiClient.post<LabOrder>(`${hospitalBase(orgSlug)}/lab-orders/${orderId}/cancel`, { reason }),
+  collectSpecimen: (orgSlug: string, lineId: string, specimenId?: string) =>
+    apiClient.post<LabOrderLine>(`${hospitalBase(orgSlug)}/lab-orders/lines/${lineId}/collect`, { specimen_id: specimenId }),
   enterResult: (orgSlug: string, lineId: string, data: EnterResultInput) =>
     apiClient.post<LabOrderLine>(`${hospitalBase(orgSlug)}/lab-orders/lines/${lineId}/result`, data),
   listCatalog: async (orgSlug: string): Promise<CatalogTest[]> => {

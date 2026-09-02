@@ -37,6 +37,13 @@ Sprint 4 — Pharmacy & Dispensing terminal.
 
 ## Gap audit and MVP backlog candidates (2026-09-02)
 
+**Shipped 2026-09-03**: the results-entry modal (`laboratory/page.tsx`'s `ResultsModal`) gained a
+per-line "Mark collected" action, a "Specimen collected …" note once done, and result/unit/
+reference-range/flag/notes inputs now stay locked until collection — matching the backend's own
+hard gate. A critical result gets a persistent destructive-bordered banner plus a per-line "⚠
+CRITICAL" pill (not color/badge alone, per `docs/ux-ui.md`'s `color-not-only` rule) rather than
+blending in with the routine `LabFlagBadge`.
+
 UI-side mirror of the completeness audit in `hospital-api/docs/sprints/sprint-3-laboratory.md`'s
 own "Gap audit" section, read that first for the full backend detail and research citations. Both
 items below are **proposed, not yet built**.
