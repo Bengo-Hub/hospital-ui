@@ -51,6 +51,7 @@ export interface Prescription {
   prescription_number: string;
   prescriber_name?: string;
   prescriber_license?: string;
+  repeat_of_prescription_id?: string;
   patient_name?: string;
   patient_dob?: string;
   patient_id_number?: string;
@@ -243,6 +244,10 @@ export const pharmacyApi = {
       `${hospitalBase(orgSlug)}/prescriptions/${id}/recheck-interactions`,
       { allergy_flags: allergyFlags }
     ),
+  /** Clones this prescription's lines into a new pending prescription for a chronic patient's
+   * regular regimen — see pharmacy.Service.CreateRefill. */
+  createRefill: (orgSlug: string, id: string) =>
+    apiClient.post<Prescription>(`${hospitalBase(orgSlug)}/prescriptions/${id}/refill`, {}),
   /** Preview-first: fetched as a blob and shown via shared-ui-lib's PdfPreview, never a raw
    *  navigation — mirrors treasury-ui's own document-preview convention. */
   downloadLabel: (orgSlug: string, prescriptionId: string, lineId: string) =>

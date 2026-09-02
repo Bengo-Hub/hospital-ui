@@ -34,6 +34,14 @@ Sprint 5 — Billing & Insurance.
 
 ## Gap audit and MVP backlog candidates (2026-09-02)
 
+**Shipped 2026-09-03**: "Create Refill" action lives on `/pharmacy/[id]/page.tsx` (prescription
+detail), navigating to the new refill's own page on success. The MAR screen landed where this
+doc's own text said it should — a new `MarPanel` (`src/components/clinical/mar-panel.tsx`) on the
+**admission detail page** (`/admissions/[admissionId]`, Sprint 6's page), not the pharmacy UI —
+with a "Chart a dose" action against the admission's active prescriptions (see the api doc's own
+note on why this is on-demand charting, not a pre-populated schedule). Allergy-recheck wiring is
+confirmed backend-only, no hospital-ui change, exactly as this doc's text already said.
+
 UI-side mirror of the completeness audit in `hospital-api/docs/sprints/
 sprint-4-pharmacy-dispensing.md`'s own "Gap audit" section, read that first for the full backend
 detail and research citations. All items below are **proposed, not yet built**.

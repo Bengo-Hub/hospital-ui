@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import {
   AlertTriangle,
   ArrowLeft,
   Ban,
   CheckCircle2,
+  CopyPlus,
   Loader2,
   Lock,
   Pill,
@@ -34,6 +35,7 @@ import {
   useDispensePrescription,
   useSubmitPharmacyInsuranceClaim,
   useRecheckInteractions,
+  useCreateRefill,
 } from '@/hooks/usePharmacy';
 import { InsuranceClaimModal } from '@/components/billing/insurance-claim-modal';
 import { VisitChargesPanel } from '@/components/billing/visit-charges-panel';
@@ -140,6 +142,7 @@ function RecheckModal({ prescriptionId, onClose }: { prescriptionId: string; onC
 
 export default function PrescriptionDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const orgSlug = params?.orgSlug as string;
   const id = params?.id as string;
 
@@ -150,6 +153,7 @@ export default function PrescriptionDetailPage() {
   const cancelRx = useCancelPrescription();
   const dispense = useDispensePrescription();
   const submitInsuranceClaim = useSubmitPharmacyInsuranceClaim();
+  const createRefill = useCreateRefill();
   const { openPreview, previewProps } = useDocumentPreview({ onError: (m) => toast.error(m) });
   const printLabel = (lineId: string, fileName: string) => {
     openPreview(() => pharmacyApi.downloadLabel(orgSlug, id, lineId), { fileName: `${fileName}.pdf`, title: 'Dispensing Label' });
@@ -255,6 +259,16 @@ export default function PrescriptionDetailPage() {
     }
   };
 
+  const handleRefill = async () => {
+    try {
+      const refill = await createRefill.mutateAsync(rx.id);
+      toast.success(`Refill created — ${refill.prescription_number}`);
+      router.push(`/${orgSlug}/pharmacy/${refill.id}`);
+    } catch (e) {
+      toast.error(await apiErrorMessage(e, 'Failed to create refill'));
+    }
+  };
+
   const anyLineRequiresWitness = Object.values(dispenseDraft).some((d) => d.requiresWitness);
 
   const handleDispense = async () => {
@@ -307,6 +321,9 @@ export default function PrescriptionDetailPage() {
   const canLock = rx.status === 'approved';
   const canDispense = rx.status === 'approved' || rx.status === 'locked' || rx.status === 'partially_dispensed';
   const canRejectOrCancel = !TERMINAL_STATUSES.includes(rx.status) && rx.status !== 'partially_dispensed';
+  // A refill clones this prescription's lines for a chronic patient's regular regimen — makes
+  // sense from any state except an explicitly voided one (cancelled/rejected).
+  const canRefill = rx.status !== 'cancelled' && rx.status !== 'rejected';
   // Insurance settles a dispensed line's charge instead of cash — only makes sense once at
   // least one line has actually been dispensed (mirrors pharmacy.Service.SubmitInsuranceClaim's
   // own precondition on the server side). Also requires a real patient/visit account to claim
@@ -403,6 +420,14 @@ export default function PrescriptionDetailPage() {
               <Button variant="outline" className="gap-2" onClick={() => setShowRecheck(true)}>
                 <RefreshCw className="h-4 w-4" />
                 Re-check Interactions
+              </Button>
+            </Can>
+          )}
+          {canRefill && (
+            <Can permission="hospital.pharmacy.prescribe">
+              <Button variant="outline" className="gap-2" onClick={handleRefill} disabled={createRefill.isPending}>
+                {createRefill.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CopyPlus className="h-4 w-4" />}
+                Create Refill
               </Button>
             </Can>
           )}

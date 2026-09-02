@@ -15,6 +15,7 @@ import { useAdmission, useWards, useTransfer, useDischarge } from '@/hooks/useIn
 import { useAccountByAdmission } from '@/hooks/useBilling';
 import { usePatient, useVisit } from '@/hooks/useClinical';
 import { AdmissionChargesPanel } from '@/components/billing/admission-charges-panel';
+import { MarPanel } from '@/components/clinical/mar-panel';
 import { inpatientApi } from '@/lib/api/inpatient';
 import type { TransferType } from '@/lib/api/inpatient';
 
@@ -334,6 +335,8 @@ export default function AdmissionDetailPage() {
       </Card>
 
       <AdmissionChargesPanel admissionId={admission.id} />
+
+      <MarPanel admissionId={admission.id} />
 
       {transferOpen && <TransferModal admissionId={admission.id} currentBedId={admission.bed_id} onClose={() => setTransferOpen(false)} />}
       {dischargeOpen && <DischargeModal admissionId={admission.id} outstandingBalance={outstandingBalance} onClose={() => setDischargeOpen(false)} />}

@@ -100,6 +100,17 @@ export function useVerifyWitness() {
   });
 }
 
+/** Not built on useRxAction — its return type is erased to unknown, and the caller needs the new
+ * refill's id (a distinct prescription from the one the action was called on) to navigate there. */
+export function useCreateRefill() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => pharmacyApi.createRefill(orgSlug, id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hospital', 'prescriptions', orgSlug] }),
+  });
+}
+
 export function useRecheckInteractions() {
   const orgSlug = useOrgSlug();
   const qc = useQueryClient();
