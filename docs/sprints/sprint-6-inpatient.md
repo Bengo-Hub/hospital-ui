@@ -1,6 +1,6 @@
 # Hospital UI — Sprint 6: Inpatient
 
-**Status:** ✅ Shipped 2026-09-02 (`hospital-ui@<pending-commit>`). `pnpm type-check`/`pnpm build` both clean; dev server boot-checked (no SSR crash on `/wards`/`/admissions`) — a full authenticated browser click-through was NOT done this pass (no local multi-service auth stack available), so real backend interaction is unverified beyond the server-layer integration test in `hospital-api`.
+**Status:** ✅ Shipped 2026-09-02 (`hospital-ui@97a147f`). `pnpm type-check`/`pnpm build` both clean; dev server boot-checked (no SSR crash on `/wards`/`/admissions`) — a full authenticated browser click-through was NOT done this pass (no local multi-service auth stack available), so real backend interaction is unverified beyond the server-layer integration test in `hospital-api`.
 **Depends on:** `hospital-api` Sprint 6
 **Goal:** Ward/bed occupancy board, admission/transfer/discharge flows.
 
