@@ -143,6 +143,9 @@ export interface HospitalOutlet {
   name: string;
   is_hq: boolean;
   status: string;
+  /** Afya facility tier for THIS outlet (chemist|clinic|facility|hospital) — presentation-only,
+   *  drives useFacilityType(). Absent for a pre-2026-09-02-synced outlet or one with no tier set. */
+  facility_type?: string;
 }
 
 /** No permission gate (mirrors /auth/me and /ping) — the outlet switcher needs this list

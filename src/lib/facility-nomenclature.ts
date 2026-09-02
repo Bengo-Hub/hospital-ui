@@ -20,6 +20,7 @@
 // locked.
 
 import { useSubscription } from '@/hooks/use-subscription';
+import { useOutletStore } from '@/store/outlet';
 
 export type FacilityType = 'chemist' | 'clinic' | 'facility' | 'hospital';
 
@@ -95,24 +96,28 @@ export function facilityModulesFor(facilityType: FacilityType): NavModuleKey[] {
 }
 
 /**
- * Resolves the tenant's facility type from the same subscription mechanism as
- * `useSubscription`/`SubscriptionGate` — no separate fetch. Defaults to 'hospital' (the full
- * superset of built modules) for: a non-Afya or not-yet-resolved plan, and while the
- * subscription lookup is still loading — consistent with useSubscription's own "fail open"
- * philosophy (a slow/failed lookup must never wrongly COLLAPSE a real hospital tenant's
- * sidebar; briefly over-showing modules for a still-resolving chemist tenant is the safer
- * direction of error).
+ * Resolves the CURRENTLY SELECTED OUTLET's facility type first (matches pos-ui/inventory-ui's
+ * own convention exactly — `use-module-access.ts`/`sidebar.tsx` there resolve nav from
+ * `outlet?.use_case`, never a subscription lookup) — this is what makes a chemist outlet and a
+ * hospital outlet under the SAME tenant show genuinely different nav, and what lets a demo/
+ * exempt tenant preview a real tier with zero subscription-plan involvement at all (2026-09-02,
+ * see `hospital-chemist-pharmacy-remediation-2026-09-02.md`'s Phase L — this replaced an
+ * earlier, tenant-wide subscription-derived resolution that couldn't do either of those
+ * things). Falls back to the subscription's own `facilityType` (a real paying single-outlet
+ * tenant may only have set it at the plan level, never the outlet level) and finally to
+ * 'hospital' (the full superset of built modules) — consistent with the fleet's "fail open"
+ * philosophy: a slow/failed/unresolved lookup must never wrongly COLLAPSE a real hospital
+ * tenant's sidebar.
  *
- * Deliberately does NOT special-case `isPlatformOwner`/`isExempt` (fixed 2026-09-02 — see
- * `hospital-chemist-pharmacy-remediation-2026-09-02.md`'s Phase K): those bypass FEATURE/
+ * Deliberately does NOT special-case `isPlatformOwner`/`isExempt` — those bypass FEATURE/
  * LICENSING gating only (`hasFeature`/`needsSubscription`/`isActive` in useSubscription), a
- * presentation concern like "which facility tier's nav to show" is not the same thing —
- * conflating them meant a platform owner could never see a real Chemist/Clinic/Facility
- * tenant's actual nav, always collapsing to the richest tier regardless of what's really
- * assigned. Matches pos-ui/inventory-ui's own convention: platform-owner status bypasses
- * per-module visibility toggles, never which outlet/tenant's real data is shown.
+ * presentation concern like "which facility tier's nav to show" is not the same thing.
+ * Matches pos-ui/inventory-ui's own convention: platform-owner status bypasses per-module
+ * visibility toggles, never which outlet/tenant's real data is shown.
  */
 export function useFacilityType(): FacilityType {
   const { info } = useSubscription();
+  const selectedOutlet = useOutletStore((s) => s.selectedOutlet);
+  if (isFacilityType(selectedOutlet?.facility_type)) return selectedOutlet.facility_type;
   return isFacilityType(info?.facilityType) ? info.facilityType : 'hospital';
 }
