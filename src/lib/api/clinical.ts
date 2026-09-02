@@ -202,6 +202,13 @@ export const triageApi = {
 export type QueueType = 'doctor' | 'dental' | 'mch' | 'specialist';
 export type ExaminationStatus = 'in_progress' | 'awaiting_lab' | 'completed';
 
+export interface DiagnosisHistoryEntry {
+  code?: string;
+  name?: string;
+  changed_by?: string;
+  changed_at: string;
+}
+
 export interface ExaminationRecord {
   id: string;
   tenant_id: string;
@@ -211,6 +218,10 @@ export interface ExaminationRecord {
   chief_complaint?: string;
   diagnosis_code?: string;
   diagnosis_name?: string;
+  diagnosis_history?: DiagnosisHistoryEntry[];
+  review_of_systems?: Record<string, string>;
+  physical_exam_findings?: Record<string, string>;
+  treatment_plan?: string;
   notes?: string;
   status: ExaminationStatus;
   examined_at: string;
@@ -222,6 +233,9 @@ export interface RecordExaminationInput {
   chief_complaint?: string;
   diagnosis_code?: string;
   diagnosis_name?: string;
+  review_of_systems?: Record<string, string>;
+  physical_exam_findings?: Record<string, string>;
+  treatment_plan?: string;
   notes?: string;
   complete?: boolean;
 }
@@ -229,6 +243,15 @@ export interface RecordExaminationInput {
 export const examinationApi = {
   record: (orgSlug: string, visitId: string, data: RecordExaminationInput) =>
     apiClient.post<ExaminationRecord>(`${hospitalBase(orgSlug)}/visits/${visitId}/examination`, data),
+  /** Latest ExaminationRecord for a visit, or null if it hasn't been examined yet — used to show
+   * the diagnosis-history trail and any already-recorded findings when a case is reopened. */
+  getLatest: async (orgSlug: string, visitId: string): Promise<ExaminationRecord | null> => {
+    try {
+      return await apiClient.get<ExaminationRecord>(`${hospitalBase(orgSlug)}/visits/${visitId}/examination`);
+    } catch {
+      return null;
+    }
+  },
 };
 
 // ── Diagnosis Catalog ────────────────────────────────────────────────────────────────────

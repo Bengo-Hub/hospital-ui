@@ -32,6 +32,12 @@ Sprint 3 — Laboratory.
 
 ## Gap audit and MVP backlog candidates (2026-09-02)
 
+**Shipped 2026-09-03**: the `ExaminationModal` (inside `/consultation/queue/page.tsx`) gained a
+"Recheck vitals" header button opening the newly-extracted `TriageModal`
+(`src/components/clinical/triage-modal.tsx`) inline, a `SystemsGrid` per-body-system input for
+both Review of Systems and Physical Exam Findings, a "Previously: X → Y" diagnosis-history line
+(from the new `useLatestExamination` hook), and a dedicated Treatment Plan textarea.
+
 UI-side mirror of the completeness audit in `hospital-api/docs/sprints/
 sprint-2-consultation-examination.md`'s own "Gap audit" section, read that first for the full
 backend detail and research citations. All items below are **proposed, not yet built**.

@@ -21,25 +21,23 @@
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { FlaskConical, Loader2, Pill, Stethoscope, X } from 'lucide-react';
+import { FlaskConical, HeartPulse, Loader2, Pill, Stethoscope, X } from 'lucide-react';
 import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
 import { PageHeader, EmptyState, Skeleton } from '@/components/ui/page';
 import { Card } from '@/components/ui/base';
 import { Can } from '@/components/auth/can';
 import { VisitStatusBadge } from '@/components/clinical/visit-status-badge';
 import { AcuityBadge, latestTriageRecord } from '@/components/clinical/acuity-badge';
+import { TriageModal, inputCls, labelCls } from '@/components/clinical/triage-modal';
 import { VisitChargesPanel } from '@/components/billing/visit-charges-panel';
 import {
-  useVisits, usePatient, useRecordExamination, useDiagnosisCatalog, useCreateDiagnosisEntry,
-  useCreateReferral, useReferrals, useCancelReferral,
+  useVisits, usePatient, useRecordExamination, useLatestExamination, useDiagnosisCatalog,
+  useCreateDiagnosisEntry, useCreateReferral, useReferrals, useCancelReferral,
 } from '@/hooks/useClinical';
 import { apiErrorMessage } from '@/lib/api/error-message';
 import type { PatientVisit, QueueType, ReferredTo } from '@/lib/api/clinical';
-
-const inputCls = 'w-full bg-background border border-border rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40';
-const labelCls = 'text-xs font-semibold text-muted-foreground mb-1 block';
 
 const QUEUE_TYPES: { value: QueueType; label: string }[] = [
   { value: 'doctor', label: 'Doctor' },
@@ -48,9 +46,45 @@ const QUEUE_TYPES: { value: QueueType; label: string }[] = [
   { value: 'specialist', label: 'Specialist' },
 ];
 
+const EXAM_SYSTEMS = [
+  { key: 'cardiovascular', label: 'Cardiovascular' },
+  { key: 'respiratory', label: 'Respiratory' },
+  { key: 'abdominal', label: 'Abdominal' },
+  { key: 'neurological', label: 'Neurological' },
+  { key: 'musculoskeletal', label: 'Musculoskeletal' },
+  { key: 'skin', label: 'Skin' },
+] as const;
+
+/** Per-body-system findings grid, shared shape/keys for both review_of_systems (patient-reported)
+ * and physical_exam_findings (clinician-observed) — both are a plain Record<system, text>. */
+function SystemsGrid({
+  values,
+  onChange,
+}: {
+  values: Record<string, string>;
+  onChange: (system: string, value: string) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {EXAM_SYSTEMS.map((sys) => (
+        <div key={sys.key}>
+          <label className="text-[11px] font-medium text-muted-foreground mb-0.5 block">{sys.label}</label>
+          <input
+            value={values[sys.key] ?? ''}
+            onChange={(e) => onChange(sys.key, e.target.value)}
+            className={`${inputCls} py-1.5 text-xs`}
+            placeholder="Normal / finding…"
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: () => void }) {
   const { data: patient } = usePatient(visit.patient_id);
   const { data: catalog } = useDiagnosisCatalog();
+  const { data: latestExam } = useLatestExamination(visit.id);
   const recordExamination = useRecordExamination();
   const createReferral = useCreateReferral();
   const createDiagnosisEntry = useCreateDiagnosisEntry();
@@ -62,8 +96,20 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
   const [diagnosisCode, setDiagnosisCode] = useState('');
   const [diagnosisName, setDiagnosisName] = useState('');
   const [manualDiagnosis, setManualDiagnosis] = useState('');
+  const [reviewOfSystems, setReviewOfSystems] = useState<Record<string, string>>({});
+  const [physicalExamFindings, setPhysicalExamFindings] = useState<Record<string, string>>({});
+  const [treatmentPlan, setTreatmentPlan] = useState('');
   const [notes, setNotes] = useState('');
   const [referralReason, setReferralReason] = useState('');
+  const [showRecheckVitals, setShowRecheckVitals] = useState(false);
+
+  // Prefill structured findings from a case being reopened (e.g. after lab results return) —
+  // doesn't clobber anything the clinician has already typed this session.
+  useEffect(() => {
+    if (!latestExam) return;
+    setReviewOfSystems((prev) => (Object.keys(prev).length ? prev : latestExam.review_of_systems ?? {}));
+    setPhysicalExamFindings((prev) => (Object.keys(prev).length ? prev : latestExam.physical_exam_findings ?? {}));
+  }, [latestExam]);
 
   // Set once a save actually persisted a diagnosis — reveals the referral actions without
   // closing the modal, per "Refer to Lab/Pharmacy … available once a diagnosis is recorded".
@@ -92,6 +138,9 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
           chief_complaint: chiefComplaint || undefined,
           diagnosis_code: finalDiagnosisCode,
           diagnosis_name: finalDiagnosisName,
+          review_of_systems: Object.keys(reviewOfSystems).length ? reviewOfSystems : undefined,
+          physical_exam_findings: Object.keys(physicalExamFindings).length ? physicalExamFindings : undefined,
+          treatment_plan: treatmentPlan || undefined,
           notes: notes || undefined,
           complete,
         },
@@ -126,9 +175,18 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
             <h3 className="font-bold text-base">Consultation</h3>
             <p className="text-xs text-muted-foreground">{patient?.full_name ?? '…'} · {visit.visit_number}</p>
           </div>
-          <button onClick={onClose} className="h-9 w-9 rounded-xl flex items-center justify-center hover:bg-accent">
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowRecheckVitals(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-accent transition-colors"
+            >
+              <HeartPulse className="h-3.5 w-3.5" />
+              Recheck vitals
+            </button>
+            <button onClick={onClose} className="h-9 w-9 rounded-xl flex items-center justify-center hover:bg-accent">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <VisitChargesPanel visitId={visit.id} className="mx-6 mt-4" />
@@ -214,6 +272,13 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
                 <input value={chiefComplaint} onChange={(e) => setChiefComplaint(e.target.value)} className={inputCls} />
               </div>
               <div>
+                <label className={labelCls}>Review of Systems</label>
+                <SystemsGrid
+                  values={reviewOfSystems}
+                  onChange={(sys, val) => setReviewOfSystems((prev) => ({ ...prev, [sys]: val }))}
+                />
+              </div>
+              <div>
                 <label className={labelCls}>Diagnosis</label>
                 <SearchableCombobox
                   options={diagnosisOptions}
@@ -227,6 +292,11 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
                   emptyText="No matching diagnosis — enter one manually below"
                   clearable
                 />
+                {latestExam && (latestExam.diagnosis_history?.length ?? 0) > 0 && (
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Previously: {latestExam.diagnosis_history!.map((h) => h.name || h.code).filter(Boolean).join(' → ')}
+                  </p>
+                )}
               </div>
               <div>
                 <label className={labelCls}>Or enter diagnosis manually</label>
@@ -264,6 +334,23 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
                 </p>
               </div>
               <div>
+                <label className={labelCls}>Physical Exam Findings</label>
+                <SystemsGrid
+                  values={physicalExamFindings}
+                  onChange={(sys, val) => setPhysicalExamFindings((prev) => ({ ...prev, [sys]: val }))}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Treatment Plan</label>
+                <textarea
+                  value={treatmentPlan}
+                  onChange={(e) => setTreatmentPlan(e.target.value)}
+                  rows={2}
+                  className={`${inputCls} resize-none`}
+                  placeholder="Advice given, no referral needed — e.g. rest, hydrate, follow up in 3 days if not improved…"
+                />
+              </div>
+              <div>
                 <label className={labelCls}>Clinical Notes</label>
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={`${inputCls} resize-none`} />
               </div>
@@ -294,6 +381,7 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
           </>
         )}
       </div>
+      {showRecheckVitals && <TriageModal visit={visit} onClose={() => setShowRecheckVitals(false)} />}
     </div>
   );
 }

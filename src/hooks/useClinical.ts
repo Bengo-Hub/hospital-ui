@@ -123,7 +123,21 @@ export function useRecordExamination() {
   return useMutation({
     mutationFn: ({ visitId, data }: { visitId: string; data: RecordExaminationInput }) =>
       examinationApi.record(orgSlug, visitId, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['hospital', 'visits', orgSlug] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['hospital', 'visits', orgSlug] });
+      qc.invalidateQueries({ queryKey: ['hospital', 'examinations', orgSlug] });
+    },
+  });
+}
+
+/** Latest ExaminationRecord for a visit — null if never examined. Powers the diagnosis-history
+ * trail and reopened-case findings prefill. */
+export function useLatestExamination(visitId?: string) {
+  const orgSlug = useOrgSlug();
+  return useQuery({
+    queryKey: ['hospital', 'examinations', orgSlug, visitId],
+    queryFn: () => examinationApi.getLatest(orgSlug, visitId as string),
+    enabled: !!orgSlug && !!visitId,
   });
 }
 
