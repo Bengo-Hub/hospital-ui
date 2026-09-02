@@ -14,6 +14,11 @@ interface LoginFormProps {
   redirectTo?: string;
   /** Show the "or continue with SSO" divider + button below the password form. */
   showSSO?: boolean;
+  /** Pre-fills the fields (still fully editable) — used by the demo tier picker. Only applied
+   *  on mount; pass a `key` on this component from the caller to force a remount when the
+   *  picked persona changes. */
+  defaultEmail?: string;
+  defaultPassword?: string;
 }
 
 /**
@@ -22,14 +27,14 @@ interface LoginFormProps {
  * controlled-substance witness re-authentication already relies on (see hospital-api's
  * pharmacy.Service.VerifyWitness), just consumed here for the primary sign-in instead.
  */
-export function LoginForm({ orgSlug, redirectTo, showSSO = true }: LoginFormProps) {
+export function LoginForm({ orgSlug, redirectTo, showSSO = true, defaultEmail = '', defaultPassword = '' }: LoginFormProps) {
   const router = useRouter();
   const loginWithPassword = useAuthStore((s) => s.loginWithPassword);
   const redirectToSSO = useAuthStore((s) => s.redirectToSSO);
   const status = useAuthStore((s) => s.status);
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(defaultEmail);
+  const [password, setPassword] = useState(defaultPassword);
   const [totpCode, setTotpCode] = useState('');
   const [mfaRequired, setMfaRequired] = useState(false);
   const [showPassword, setShowPassword] = useState(false);

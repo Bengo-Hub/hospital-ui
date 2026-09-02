@@ -3,51 +3,7 @@
 import { useState } from 'react';
 import { Check, ChevronDown, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface DemoAccount {
-  label: string;
-  email: string;
-  password: string;
-}
-
-interface DemoGroup {
-  key: string;
-  title: string;
-  description: string;
-  accounts: DemoAccount[];
-}
-
-// codevertex-demo is ONE shared tenant (per this platform's own convention — every use case is
-// an outlet under the same tenant, never a separate demo tenant per facility size), so every
-// account below sees the same subscription/facility-tier resolution today. Grouped here by ROLE
-// PERSONA — which real-world facility size that role is most representative of — not by an
-// actual separate subscription tier. Seeded in auth-api's cmd/seed/seed_users.go (demoStaff);
-// verified working (HTTP 200 against /auth/login) 2026-08-29.
-const DEMO_GROUPS: DemoGroup[] = [
-  {
-    key: 'chemist',
-    title: 'Afya Chemist — standalone pharmacy',
-    description: 'Dispensing + controlled-substance register only.',
-    accounts: [{ label: 'Pharmacist', email: 'pharmacist.afya@demo.codevertexafrica.com', password: 'DemoStaff2024!' }],
-  },
-  {
-    key: 'clinic',
-    title: 'Afya Clinic / Facility / Hospital — full clinical team',
-    description: 'Reception, triage, consultation, lab, pharmacy and billing.',
-    accounts: [
-      { label: 'Doctor', email: 'doctor@demo.codevertexafrica.com', password: 'DemoStaff2024!' },
-      { label: 'Nurse', email: 'nurse@demo.codevertexafrica.com', password: 'DemoStaff2024!' },
-      { label: 'Records clerk', email: 'records@demo.codevertexafrica.com', password: 'DemoStaff2024!' },
-      { label: 'Clinic manager', email: 'mgr.hospital@demo.codevertexafrica.com', password: 'DemoStaff2024!' },
-    ],
-  },
-  {
-    key: 'admin',
-    title: 'Tenant administrator',
-    description: 'Full access across every module and facility tier.',
-    accounts: [{ label: 'Admin', email: 'admin@demo.codevertexafrica.com', password: 'DemoAdmin2024!' }],
-  },
-];
+import { DEMO_PERSONA_GROUPS, type DemoAccount } from '@/lib/auth/demo-personas';
 
 function CopyRow({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
@@ -89,7 +45,7 @@ function AccountCard({ account }: { account: DemoAccount }) {
   );
 }
 
-/** Demo-tenant credential reference, grouped by facility-tier persona (see DEMO_GROUPS' own
+/** Demo-tenant credential reference, grouped by facility-tier persona (see DEMO_PERSONA_GROUPS' own
  *  comment for what "grouped" actually means here). Accounts within a group scroll horizontally
  *  (a fixed max height, never stretches the page) rather than stacking vertically. Collapsed by
  *  default so it doesn't compete with the actual sign-in form for attention. */
@@ -105,7 +61,7 @@ export function DemoCredentials() {
         </p>
       </div>
       <div className="divide-y divide-border">
-        {DEMO_GROUPS.map((group) => {
+        {DEMO_PERSONA_GROUPS.map((group) => {
           const open = openKey === group.key;
           return (
             <div key={group.key}>
