@@ -4,41 +4,76 @@
 // UX/interaction pattern of pos-ui's `[orgSlug]/patients/page.tsx` (register modal shape, table
 // layout, toast-on-success/error) onto hospital-ui's own stack (`useClinical.ts` hooks,
 // `@/components/ui/{base,page}` primitives, `Can` for action-level gating). See docs/sprints/
-// sprint-1-reception-opd-triage.md — that doc additionally describes a Kenya ID-type selector and
-// a separate `/patients/[id]` detail page; neither exists in `RegisterPatientInput`/`Patient`
-// (lib/api/clinical.ts) yet, so this page sticks to the fields the backend actually accepts.
+// sprint-1-reception-opd-triage.md. The ID-type selector, SHA/SHIF beneficiary number, photo
+// capture, and non-blocking duplicate-patient warning (2026-09-03 MVP gap backlog) are all now
+// wired here.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { ClipboardPlus, Loader2, Search, UserPlus, UserSquare, X } from 'lucide-react';
+import { Camera, ClipboardPlus, Loader2, Search, UserPlus, UserSquare, X } from 'lucide-react';
 import { PageHeader, EmptyState, Skeleton } from '@/components/ui/page';
 import { Card, Button, Input } from '@/components/ui/base';
 import { Can } from '@/components/auth/can';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePatients, useRegisterPatient, useCheckInVisit, useVisits } from '@/hooks/useClinical';
 import { apiErrorMessage } from '@/lib/api/error-message';
-import type { Patient } from '@/lib/api/clinical';
+import { mediaApi, patientsApi } from '@/lib/api/clinical';
+import type { IdentificationType, Patient, PatientDuplicateSummary } from '@/lib/api/clinical';
+
+const IDENTIFICATION_TYPES: { value: IdentificationType; label: string }[] = [
+  { value: 'national_id', label: 'National ID' },
+  { value: 'passport', label: 'Passport' },
+  { value: 'birth_certificate', label: 'Birth Certificate' },
+  { value: 'maisha_number', label: 'Maisha Number' },
+  { value: 'alien_id', label: 'Alien ID' },
+];
 
 const inputCls = 'w-full bg-background border border-border rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40';
 const labelCls = 'text-xs font-semibold text-muted-foreground mb-1 block';
 
-function RegisterPatientModal({ onClose, onRegistered }: { onClose: () => void; onRegistered: (p: Patient) => void }) {
+function RegisterPatientModal({
+  orgSlug,
+  onClose,
+  onRegistered,
+}: {
+  orgSlug: string;
+  onClose: () => void;
+  onRegistered: (p: Patient) => void;
+}) {
   const registerPatient = useRegisterPatient();
   const [fullName, setFullName] = useState('');
   const [dob, setDob] = useState('');
   const [sex, setSex] = useState('');
   const [phone, setPhone] = useState('');
   const [idNumber, setIdNumber] = useState('');
+  const [identificationType, setIdentificationType] = useState<IdentificationType | ''>('');
+  const [shaBeneficiaryNumber, setShaBeneficiaryNumber] = useState('');
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [photoUploading, setPhotoUploading] = useState(false);
   const [address, setAddress] = useState('');
   const [nextOfKin, setNextOfKin] = useState('');
   const [allergies, setAllergies] = useState('');
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false);
+  const [duplicateMatches, setDuplicateMatches] = useState<PatientDuplicateSummary[] | null>(null);
 
-  const handleSubmit = async () => {
-    if (!fullName.trim()) {
-      toast.error('Full name is required');
-      return;
+  const handlePhotoChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setPhotoUploading(true);
+    try {
+      const { url } = await mediaApi.upload(orgSlug, file);
+      setPhotoUrl(url);
+    } catch (err) {
+      toast.error(await apiErrorMessage(err, 'Failed to upload photo'));
+    } finally {
+      setPhotoUploading(false);
     }
+  };
+
+  const doRegister = async () => {
     try {
       const patient = await registerPatient.mutateAsync({
         full_name: fullName.trim(),
@@ -46,6 +81,9 @@ function RegisterPatientModal({ onClose, onRegistered }: { onClose: () => void; 
         sex: sex || undefined,
         phone: phone || undefined,
         id_number: idNumber || undefined,
+        identification_type: identificationType || undefined,
+        sha_beneficiary_number: shaBeneficiaryNumber || undefined,
+        photo_url: photoUrl || undefined,
         address: address || undefined,
         next_of_kin: nextOfKin || undefined,
         allergy_flags: allergies.trim()
@@ -57,6 +95,31 @@ function RegisterPatientModal({ onClose, onRegistered }: { onClose: () => void; 
     } catch (e) {
       toast.error(await apiErrorMessage(e, 'Failed to register patient'));
     }
+  };
+
+  const handleSubmit = async () => {
+    if (!fullName.trim()) {
+      toast.error('Full name is required');
+      return;
+    }
+    // Non-blocking duplicate check — a match surfaces a warning, never a hard stop.
+    setCheckingDuplicates(true);
+    try {
+      const matches = await patientsApi.checkDuplicates(orgSlug, {
+        full_name: fullName.trim(),
+        phone: phone || undefined,
+        id_number: idNumber || undefined,
+      });
+      if (matches.length > 0) {
+        setDuplicateMatches(matches);
+        return;
+      }
+    } catch {
+      // Lookup failure must never block registration — proceed as if no match was found.
+    } finally {
+      setCheckingDuplicates(false);
+    }
+    await doRegister();
   };
 
   return (
@@ -106,6 +169,48 @@ function RegisterPatientModal({ onClose, onRegistered }: { onClose: () => void; 
               <input value={idNumber} onChange={(e) => setIdNumber(e.target.value)} className={inputCls} />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>ID Type</label>
+              <select
+                value={identificationType}
+                onChange={(e) => setIdentificationType(e.target.value as IdentificationType | '')}
+                className={inputCls}
+              >
+                <option value="">—</option>
+                {IDENTIFICATION_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>SHA/SHIF Beneficiary #</label>
+              <input
+                value={shaBeneficiaryNumber}
+                onChange={(e) => setShaBeneficiaryNumber(e.target.value)}
+                className={inputCls}
+                placeholder="Captured once, reused at claims"
+              />
+            </div>
+          </div>
+          <div>
+            <label className={labelCls}>Photo</label>
+            <div className="flex items-center gap-3">
+              {photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={photoUrl} alt="Patient" className="h-12 w-12 rounded-lg object-cover border border-border" />
+              ) : (
+                <div className="h-12 w-12 rounded-lg border border-dashed border-border flex items-center justify-center text-muted-foreground">
+                  <Camera className="h-4.5 w-4.5" />
+                </div>
+              )}
+              <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-accent transition-colors cursor-pointer">
+                {photoUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+                {photoUrl ? 'Replace photo' : 'Add photo'}
+                <input type="file" accept="image/jpeg,image/png" className="hidden" onChange={handlePhotoChange} disabled={photoUploading} />
+              </label>
+            </div>
+          </div>
           <div>
             <label className={labelCls}>Address</label>
             <input value={address} onChange={(e) => setAddress(e.target.value)} className={inputCls} />
@@ -135,14 +240,32 @@ function RegisterPatientModal({ onClose, onRegistered }: { onClose: () => void; 
           </button>
           <button
             onClick={handleSubmit}
-            disabled={registerPatient.isPending}
+            disabled={registerPatient.isPending || checkingDuplicates}
             className="flex-1 min-h-11 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {registerPatient.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            {(registerPatient.isPending || checkingDuplicates) && <Loader2 className="h-4 w-4 animate-spin" />}
             Register
           </button>
         </div>
       </div>
+      <ConfirmDialog
+        open={duplicateMatches !== null}
+        variant="warning"
+        title="Possible duplicate patient"
+        description={
+          duplicateMatches
+            ? `${duplicateMatches.length === 1 ? 'A patient' : `${duplicateMatches.length} patients`} matching this name, phone, or ID already exists: ${duplicateMatches
+                .map((m) => `${m.full_name} (MRN ${m.mrn})`)
+                .join(', ')}. Register a new record anyway?`
+            : ''
+        }
+        confirmLabel="Register anyway"
+        onCancel={() => setDuplicateMatches(null)}
+        onConfirm={() => {
+          setDuplicateMatches(null);
+          void doRegister();
+        }}
+      />
     </div>
   );
 }
@@ -300,6 +423,7 @@ function PatientsPage() {
 
       {registerOpen && (
         <RegisterPatientModal
+          orgSlug={orgSlug}
           onClose={() => setRegisterOpen(false)}
           onRegistered={(p) => {
             setRegisterOpen(false);

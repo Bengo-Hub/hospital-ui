@@ -8,6 +8,8 @@ import { hospitalBase, unwrapList } from './types';
 
 // ── Patients ─────────────────────────────────────────────────────────────────────────────
 
+export type IdentificationType = 'national_id' | 'passport' | 'birth_certificate' | 'maisha_number' | 'alien_id';
+
 export interface Patient {
   id: string;
   tenant_id: string;
@@ -18,6 +20,9 @@ export interface Patient {
   sex?: string;
   phone?: string;
   id_number?: string;
+  identification_type?: IdentificationType;
+  sha_beneficiary_number?: string;
+  photo_url?: string;
   address?: string;
   next_of_kin?: string;
   allergy_flags?: string[];
@@ -34,6 +39,9 @@ export interface RegisterPatientInput {
   sex?: string;
   phone?: string;
   id_number?: string;
+  identification_type?: IdentificationType;
+  sha_beneficiary_number?: string;
+  photo_url?: string;
   address?: string;
   next_of_kin?: string;
   allergy_flags?: string[];
@@ -46,9 +54,23 @@ export interface UpdatePatientInput {
   sex?: string;
   phone?: string;
   id_number?: string;
+  identification_type?: IdentificationType;
+  sha_beneficiary_number?: string;
+  photo_url?: string;
   address?: string;
   next_of_kin?: string;
   allergy_flags?: string[];
+}
+
+/** Lightweight projection returned by patientsApi.checkDuplicates — enough to recognise "is this
+ * the same person" without a full patient fetch. Mirrors hospital-api's PatientSummary. */
+export interface PatientDuplicateSummary {
+  id: string;
+  mrn: string;
+  full_name: string;
+  phone?: string;
+  id_number?: string;
+  dob?: string;
 }
 
 export const patientsApi = {
@@ -62,6 +84,27 @@ export const patientsApi = {
     apiClient.get<Patient>(`${hospitalBase(orgSlug)}/patients/${patientId}`),
   update: (orgSlug: string, patientId: string, data: UpdatePatientInput) =>
     apiClient.put<Patient>(`${hospitalBase(orgSlug)}/patients/${patientId}`, data),
+  /** Non-blocking pre-registration lookup — call before the final "Register" submit and surface
+   * a "continue anyway?" warning when it returns matches. Never call this to hard-block. */
+  checkDuplicates: async (
+    orgSlug: string,
+    params: { full_name?: string; phone?: string; id_number?: string },
+  ): Promise<PatientDuplicateSummary[]> => {
+    const res = await apiClient.get<{ data: PatientDuplicateSummary[] }>(
+      `${hospitalBase(orgSlug)}/patients/check-duplicates`,
+      params,
+    );
+    return unwrapList(res);
+  },
+};
+
+/** Uploads a patient photo (JPEG/PNG, 2MB max) and returns its stored URL for photo_url. */
+export const mediaApi = {
+  upload: async (orgSlug: string, file: File): Promise<{ url: string; filename: string }> => {
+    const form = new FormData();
+    form.append('file', file);
+    return apiClient.post(`${hospitalBase(orgSlug)}/media/upload`, form);
+  },
 };
 
 // ── Visits ───────────────────────────────────────────────────────────────────────────────
@@ -85,6 +128,11 @@ export interface PatientVisit {
   discharged_at?: string;
   created_at: string;
   updated_at: string;
+  /** Only populated by ListVisits' OPD-queue path (not the per-patient history path) — the
+   * visit's TriageRecords, used client-side to show the latest acuity/priority badge. The list
+   * itself already comes back urgent-first for registered/triaged visits (see ListVisits'
+   * server-side acuity sort), this is just for the badge's label/colour. */
+  edges?: { triage_records?: TriageRecord[] };
 }
 
 export interface CheckInVisitInput {

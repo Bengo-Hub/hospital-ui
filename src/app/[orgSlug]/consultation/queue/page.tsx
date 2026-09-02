@@ -29,6 +29,7 @@ import { PageHeader, EmptyState, Skeleton } from '@/components/ui/page';
 import { Card } from '@/components/ui/base';
 import { Can } from '@/components/auth/can';
 import { VisitStatusBadge } from '@/components/clinical/visit-status-badge';
+import { AcuityBadge, latestTriageRecord } from '@/components/clinical/acuity-badge';
 import { VisitChargesPanel } from '@/components/billing/visit-charges-panel';
 import {
   useVisits, usePatient, useRecordExamination, useDiagnosisCatalog, useCreateDiagnosisEntry,
@@ -304,6 +305,7 @@ function VisitRow({ visit, onExamine }: { visit: PatientVisit; onExamine: () => 
       <td className="px-4 py-3.5 font-mono text-xs">{visit.visit_number}</td>
       <td className="px-4 py-3.5 font-medium">{patient?.full_name ?? '…'}</td>
       <td className="px-4 py-3.5 text-muted-foreground">{visit.chief_complaint || '—'}</td>
+      <td className="px-4 py-3.5"><AcuityBadge priority={latestTriageRecord(visit)?.priority} /></td>
       <td className="px-4 py-3.5"><VisitStatusBadge status={visit.status} /></td>
       <td className="px-4 py-3.5 text-right">
         <Can permission="hospital.consultation.add">
@@ -368,6 +370,7 @@ function ConsultationQueuePage() {
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Visit #</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Patient</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Chief Complaint</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Priority</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Status</th>
                 <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Actions</th>
               </tr>

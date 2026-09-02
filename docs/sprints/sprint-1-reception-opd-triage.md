@@ -29,6 +29,13 @@ Sprint 2 — Consultation & Examination.
 
 ## Gap audit and MVP backlog candidates (2026-09-02)
 
+**Shipped 2026-09-03**: identification-type dropdown, SHA/SHIF beneficiary field, photo upload
+(`RegisterPatientModal`), the non-blocking "possible duplicate" `ConfirmDialog` warning, and the
+OPD/consultation queue's priority badge (new `AcuityBadge`/`latestTriageRecord`, `src/components/
+clinical/acuity-badge.tsx`) reflecting the backend's urgent-first ordering are all live. See
+`hospital-api/docs/mvp-gap-backlog-2026-09-02.md` for backend detail. Appointments unchanged
+(still `comingSoon`, out of scope).
+
 UI-side mirror of the completeness audit in `hospital-api/docs/sprints/
 sprint-1-patient-opd-triage.md`'s own "Gap audit" section, read that first for the full backend
 detail and research citations. All items below are **proposed, not yet built**.
