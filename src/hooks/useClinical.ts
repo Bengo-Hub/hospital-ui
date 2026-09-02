@@ -94,6 +94,15 @@ export function useCheckInVisit() {
   });
 }
 
+export function useCancelVisit() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ visitId, reason }: { visitId: string; reason?: string }) => visitsApi.cancel(orgSlug, visitId, reason),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hospital', 'visits', orgSlug] }),
+  });
+}
+
 // ── Triage ───────────────────────────────────────────────────────────────────────────────
 
 export function useRecordTriage() {
@@ -160,5 +169,17 @@ export function useReferrals(visitId?: string) {
     queryKey: ['hospital', 'referrals', orgSlug, visitId],
     queryFn: () => referralsApi.list(orgSlug, visitId as string),
     enabled: !!orgSlug && !!visitId,
+  });
+}
+
+export function useCancelReferral() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ visitId, referralId }: { visitId: string; referralId: string }) =>
+      referralsApi.cancel(orgSlug, visitId, referralId),
+    onSuccess: (_res, { visitId }) => {
+      qc.invalidateQueries({ queryKey: ['hospital', 'referrals', orgSlug, visitId] });
+    },
   });
 }

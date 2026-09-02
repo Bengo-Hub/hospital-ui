@@ -11,7 +11,7 @@ import { Can } from '@/components/auth/can';
 import { VisitStatusBadge } from '@/components/clinical/visit-status-badge';
 import { VisitChargesPanel } from '@/components/billing/visit-charges-panel';
 import { apiErrorMessage } from '@/lib/api/error-message';
-import { usePatient, useUpdatePatient, useVisitsByPatient } from '@/hooks/useClinical';
+import { usePatient, useUpdatePatient, useVisitsByPatient, useCancelVisit } from '@/hooks/useClinical';
 import type { Patient } from '@/lib/api/clinical';
 
 function EditPatientModal({ patient, onClose }: { patient: Patient; onClose: () => void }) {
@@ -124,8 +124,20 @@ export default function PatientDetailPage() {
 
   const { data: patient, isLoading } = usePatient(patientId);
   const { data: visits, isLoading: visitsLoading } = useVisitsByPatient(patientId);
+  const cancelVisit = useCancelVisit();
   const [editOpen, setEditOpen] = useState(false);
   const [expandedVisitId, setExpandedVisitId] = useState<string | null>(null);
+
+  const handleCancelVisit = async (visitId: string, visitNumber: string) => {
+    const reason = window.prompt(`Cancel visit ${visitNumber}? Enter a reason (optional):`);
+    if (reason === null) return; // user dismissed the prompt
+    try {
+      await cancelVisit.mutateAsync({ visitId, reason: reason || undefined });
+      toast.success('Visit cancelled');
+    } catch (e) {
+      toast.error(await apiErrorMessage(e, 'Failed to cancel visit'));
+    }
+  };
 
   if (isLoading || !patient) {
     return (
@@ -232,6 +244,18 @@ export default function PatientDetailPage() {
                         >
                           {expandedVisitId === v.id ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                         </button>
+                        {v.status !== 'completed' && v.status !== 'cancelled' && (
+                          <Can permission="hospital.reception.manage">
+                            <button
+                              type="button"
+                              onClick={() => handleCancelVisit(v.id, v.visit_number)}
+                              disabled={cancelVisit.isPending}
+                              className="text-xs font-medium text-destructive hover:underline disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                          </Can>
+                        )}
                       </div>
                     </td>
                   </tr>

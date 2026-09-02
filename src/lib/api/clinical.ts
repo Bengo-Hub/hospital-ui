@@ -107,6 +107,8 @@ export const visitsApi = {
     const res = await apiClient.get<{ data: PatientVisit[] }>(`${hospitalBase(orgSlug)}/visits`, { patient_id: patientId });
     return unwrapList(res);
   },
+  cancel: (orgSlug: string, visitId: string, reason?: string) =>
+    apiClient.post<PatientVisit>(`${hospitalBase(orgSlug)}/visits/${visitId}/cancel`, { reason }),
 };
 
 // ── Triage ───────────────────────────────────────────────────────────────────────────────
@@ -220,4 +222,6 @@ export const referralsApi = {
     apiClient.post<Referral>(`${hospitalBase(orgSlug)}/visits/${visitId}/refer`, data),
   list: (orgSlug: string, visitId: string) =>
     apiClient.get<{ data: Referral[] }>(`${hospitalBase(orgSlug)}/visits/${visitId}/referrals`).then(unwrapList),
+  cancel: (orgSlug: string, visitId: string, referralId: string) =>
+    apiClient.post<Referral>(`${hospitalBase(orgSlug)}/visits/${visitId}/refer/${referralId}/cancel`, {}),
 };

@@ -31,7 +31,8 @@ import { Can } from '@/components/auth/can';
 import { VisitStatusBadge } from '@/components/clinical/visit-status-badge';
 import { VisitChargesPanel } from '@/components/billing/visit-charges-panel';
 import {
-  useVisits, usePatient, useRecordExamination, useDiagnosisCatalog, useCreateDiagnosisEntry, useCreateReferral, useReferrals,
+  useVisits, usePatient, useRecordExamination, useDiagnosisCatalog, useCreateDiagnosisEntry,
+  useCreateReferral, useReferrals, useCancelReferral,
 } from '@/hooks/useClinical';
 import { apiErrorMessage } from '@/lib/api/error-message';
 import type { PatientVisit, QueueType, ReferredTo } from '@/lib/api/clinical';
@@ -53,6 +54,7 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
   const createReferral = useCreateReferral();
   const createDiagnosisEntry = useCreateDiagnosisEntry();
   const { data: referrals = [] } = useReferrals(visit.id);
+  const cancelReferral = useCancelReferral();
 
   const [queueType, setQueueType] = useState<QueueType>('doctor');
   const [chiefComplaint, setChiefComplaint] = useState(visit.chief_complaint ?? '');
@@ -140,9 +142,29 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
               <div className="rounded-xl border border-border p-3 space-y-1.5">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Referrals on this visit</p>
                 {referrals.map((ref) => (
-                  <div key={ref.id} className="flex items-center justify-between text-xs">
+                  <div key={ref.id} className="flex items-center justify-between text-xs gap-2">
                     <span className="capitalize font-medium">{ref.referred_to.replace('_', ' ')}</span>
-                    <span className="text-muted-foreground">{ref.status}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground capitalize">{ref.status.replace('_', ' ')}</span>
+                      {ref.status === 'pending' && (
+                        <Can permission="hospital.consultation.manage">
+                          <button
+                            onClick={async () => {
+                              try {
+                                await cancelReferral.mutateAsync({ visitId: visit.id, referralId: ref.id });
+                                toast.success('Referral cancelled');
+                              } catch (e) {
+                                toast.error(await apiErrorMessage(e, 'Failed to cancel referral'));
+                              }
+                            }}
+                            disabled={cancelReferral.isPending}
+                            className="text-destructive hover:underline disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
+                        </Can>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
