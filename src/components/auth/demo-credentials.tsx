@@ -34,10 +34,36 @@ function CopyRow({ value }: { value: string }) {
 
 /** One role's credentials as a single compact, self-contained tile — email and password read as
  *  one linked unit rather than two loose fields. Fixed width so a group's accounts lay out as a
- *  horizontally-scrolling row instead of stacking (and stretching the page) vertically. */
-function AccountCard({ account }: { account: DemoAccount }) {
+ *  horizontally-scrolling row instead of stacking (and stretching the page) vertically.
+ *
+ *  Clicking anywhere on the tile fills the sign-in form with this account (same one-click
+ *  behavior the tier picker already gives the primary account of each group — every OTHER
+ *  account used to be reachable only by copy-pasting each field by hand, real friction reported
+ *  live 2026-09-02, worse still when the email field has scrolled out of view above the fold).
+ *  The two value rows are real buttons that ALSO copy their own value on click — deliberately NOT
+ *  stopPropagation'd, since the two CopyRows visually cover almost the entire tile (the account
+ *  label is a thin single line above them) — an earlier version tried to keep "select" and "copy"
+ *  as separate, non-overlapping actions via stopPropagation, and that meant nearly every real
+ *  click landed on a CopyRow and silently never selected anything. Both firing together (copy +
+ *  select) is harmless and matches what someone clicking a value almost certainly wants anyway. */
+function AccountCard({ account, onSelect }: { account: DemoAccount; onSelect: (account: DemoAccount) => void }) {
+  // A <div role="button"> here, not a real <button> — it wraps two real <button> CopyRows, and
+  // <button> cannot nest inside <button> (invalid HTML, breaks hydration). Keyboard-operable via
+  // tabIndex + Enter/Space so it's not a click-only interaction.
   return (
-    <div className="w-[168px] shrink-0 rounded-lg border border-border/70 bg-background/60 p-2.5 space-y-1.5">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => onSelect(account)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect(account);
+        }
+      }}
+      className="w-[168px] shrink-0 rounded-lg border border-border/70 bg-background/60 p-2.5 space-y-1.5 text-left cursor-pointer hover:border-brand-primary/60 hover:bg-background transition-colors"
+      title={`Use ${account.label}'s demo credentials`}
+    >
       <p className="text-[11px] font-bold text-foreground truncate">{account.label}</p>
       <CopyRow value={account.email} />
       <CopyRow value={account.password} />
@@ -48,8 +74,12 @@ function AccountCard({ account }: { account: DemoAccount }) {
 /** Demo-tenant credential reference, grouped by facility-tier persona (see DEMO_PERSONA_GROUPS' own
  *  comment for what "grouped" actually means here). Accounts within a group scroll horizontally
  *  (a fixed max height, never stretches the page) rather than stacking vertically. Collapsed by
- *  default so it doesn't compete with the actual sign-in form for attention. */
-export function DemoCredentials() {
+ *  default so it doesn't compete with the actual sign-in form for attention.
+ *
+ *  onSelect fills the sign-in form with the clicked account (see AccountCard) — optional so this
+ *  component still renders as a plain copy-reference panel if ever reused somewhere with no form
+ *  to fill. */
+export function DemoCredentials({ onSelect }: { onSelect?: (account: DemoAccount) => void }) {
   const [openKey, setOpenKey] = useState<string | null>('clinic');
 
   return (
@@ -81,7 +111,7 @@ export function DemoCredentials() {
                 <div className="px-4 pb-3.5">
                   <div className="flex gap-2 overflow-x-auto pb-1 -mx-0.5 px-0.5">
                     {group.accounts.map((acc) => (
-                      <AccountCard key={acc.email} account={acc} />
+                      <AccountCard key={acc.email} account={acc} onSelect={onSelect ?? (() => {})} />
                     ))}
                   </div>
                 </div>

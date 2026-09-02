@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Building2, ClipboardCheck, LogIn, Stethoscope } from 'lucide-react';
 import {
   PinLoginLayout, PinLoginHeader, PinLoginBrandPanel, type WorkflowStep,
@@ -39,6 +39,17 @@ export function TenantSignIn({ orgSlug }: { orgSlug?: string }) {
 
   const [step, setStep] = useState<Step>(isDemoTenant ? 'tier' : 'credentials');
   const [picked, setPicked] = useState<DemoAccount | null>(null);
+  const cardScrollRef = useRef<HTMLDivElement>(null);
+
+  // DemoCredentials sits BELOW the sign-in form, so picking a non-primary persona from it (the
+  // tier picker only one-click-fills each group's FIRST account) would silently fill the email
+  // field off-screen above the fold — real reported confusion 2026-09-02 ("the login form does
+  // not show the email field"). Scroll back to the top of the card on every pick so the filled
+  // form is immediately visible.
+  function handleDemoSelect(account: DemoAccount) {
+    setPicked(account);
+    cardScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 
   const header = (
     <PinLoginHeader
@@ -100,7 +111,7 @@ export function TenantSignIn({ orgSlug }: { orgSlug?: string }) {
       header={header}
       brandPanel={brandPanel}
       card={
-        <div className="flex-1 min-h-0 flex flex-col gap-5 p-4 sm:p-8 overflow-y-auto justify-center">
+        <div ref={cardScrollRef} className="flex-1 min-h-0 flex flex-col gap-5 p-4 sm:p-8 overflow-y-auto justify-center">
           <div className="w-full max-w-sm mx-auto space-y-5">
             <div>
               <h1 className="text-xl font-black tracking-tight text-foreground">Sign in to {tenantName}</h1>
@@ -114,7 +125,7 @@ export function TenantSignIn({ orgSlug }: { orgSlug?: string }) {
               defaultEmail={picked?.email}
               defaultPassword={picked?.password}
             />
-            {isDemoTenant && <DemoCredentials />}
+            {isDemoTenant && <DemoCredentials onSelect={handleDemoSelect} />}
           </div>
         </div>
       }
