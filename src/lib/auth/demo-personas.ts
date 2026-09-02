@@ -20,7 +20,13 @@
  * Seeded in auth-api's cmd/seed/seed_users.go (demoStaff) / seed_tenants.go (outletsByTenant).
  * pharmacist.chemist@ is scoped to the demo-chemist outlet (facility_type=chemist in its
  * metadata) — this is deliberately NOT pharmacist.afya@, which is scoped to demo-hospital (left
- * unclassified on purpose, so it keeps showing the full tier for sales demos). */
+ * unclassified on purpose, so it keeps showing the full tier for sales demos).
+ *
+ * cashier.afya@ (added 2026-09-02) demos hospital-api's own RoleCashier — the universal
+ * billing-desk role that collects ANY department's charge (a physician's consultation fee, lab,
+ * a clinical-tier pharmacy dispense, etc. — every one already posts a real BillableCharge). Not
+ * the same account as pos-api's own retail cashier@demo.codevertexafrica.com (a different role in
+ * a different service, scoped to POS outlets, not demo-hospital, and not part of this list). */
 
 export interface DemoAccount {
   label: string;
@@ -57,6 +63,7 @@ export const DEMO_PERSONA_GROUPS: DemoPersonaGroup[] = [
       { label: 'Doctor', email: 'doctor@demo.codevertexafrica.com', password: 'DemoStaff2024!' },
       { label: 'Nurse', email: 'nurse@demo.codevertexafrica.com', password: 'DemoStaff2024!' },
       { label: 'Pharmacist', email: 'pharmacist.afya@demo.codevertexafrica.com', password: 'DemoStaff2024!' },
+      { label: 'Cashier', email: 'cashier.afya@demo.codevertexafrica.com', password: 'DemoStaff2024!' },
       { label: 'Records clerk', email: 'records@demo.codevertexafrica.com', password: 'DemoStaff2024!' },
       { label: 'Clinic manager', email: 'mgr.hospital@demo.codevertexafrica.com', password: 'DemoStaff2024!' },
     ],
