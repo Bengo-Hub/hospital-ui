@@ -9,6 +9,7 @@ import { apiErrorMessage } from '@/lib/api/error-message';
 import { useCreatePrescription, useApprovePrescription, useDispensePrescription, useCollectWalkInSale } from '@/hooks/usePharmacy';
 import { CollectPaymentDialog } from '@/components/billing/collect-payment-dialog';
 import { WitnessConfirmForm, type ConfirmedWitness } from '@/components/pharmacy/witness-confirm-form';
+import { drugToOption } from '@/components/pharmacy/drug-option';
 import { pharmacyApi } from '@/lib/api/pharmacy';
 import type { DrugSearchItem, WalkInSale } from '@/lib/api/pharmacy';
 
@@ -21,10 +22,6 @@ interface CartLine {
   quantity: number;
   unit_price: number;
   is_controlled_substance: boolean;
-}
-
-function drugToOption(item: DrugSearchItem): ComboboxOption {
-  return { value: item.sku, label: item.name, hint: [item.sku, item.strength].filter(Boolean).join(' · ') };
 }
 
 type Stage = 'cart' | 'review' | 'witness' | 'collect' | 'done';
