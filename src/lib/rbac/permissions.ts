@@ -131,6 +131,9 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     P.PHARMACY_VIEW, P.PHARMACY_PRESCRIBE, P.PHARMACY_DISPENSE, P.PHARMACY_MANAGE,
     P.BILLING_VIEW,
     P.BILLING_COLLECT_OWN,
+    // Read-only patient lookup — see hospital-api's rbac/seed.go RolePharmacist comment. Inert at
+    // Chemist tier (facilityModulesFor() hides 'patients' there regardless of permission).
+    P.RECORDS_VIEW,
   ],
   lab_technician: [
     P.LAB_VIEW, P.LAB_ADD, P.LAB_CHANGE,
