@@ -106,6 +106,20 @@ export interface CollectWalkInSaleInput {
   phone_number?: string;
 }
 
+// ── Drug search (2026-09-02) — a real inventory-api-backed picker, replacing free-text SKU/ ──
+// name entry on the New Prescription form.
+export interface DrugSearchItem {
+  sku: string;
+  name: string;
+  generic_name?: string;
+  dosage_form?: string;
+  strength?: string;
+  drug_class?: string;
+  is_controlled_substance: boolean;
+  selling_price?: number;
+  available?: number;
+}
+
 export interface PrescriptionLineInput {
   inventory_item_sku?: string;
   drug_name: string;
@@ -233,6 +247,11 @@ export const pharmacyApi = {
    *  navigation — mirrors treasury-ui's own document-preview convention. */
   downloadLabel: (orgSlug: string, prescriptionId: string, lineId: string) =>
     apiClient.getBlob(`${hospitalBase(orgSlug)}/prescriptions/${prescriptionId}/lines/${lineId}/label.pdf`),
+
+  searchDrugs: async (orgSlug: string, q: string): Promise<DrugSearchItem[]> => {
+    const res = await apiClient.get<{ data: DrugSearchItem[] }>(`${hospitalBase(orgSlug)}/pharmacy/drug-search`, q ? { q } : undefined);
+    return unwrapList(res);
+  },
 
   // ── WalkInSale (Chemist-tier ledgerless checkout) ──────────────────────────────────────
   listWalkInSales: async (orgSlug: string, status?: string): Promise<WalkInSale[]> => {

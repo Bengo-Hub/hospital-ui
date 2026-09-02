@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Eye, Loader2, Pill, Plus, Receipt, ShieldAlert, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
 import { Card, Button, Badge, Input } from '@/components/ui/base';
 import { PageHeader, EmptyState, Skeleton } from '@/components/ui/page';
 import { Can } from '@/components/auth/can';
@@ -12,7 +13,8 @@ import { apiErrorMessage } from '@/lib/api/error-message';
 import { usePrescriptions, useCreatePrescription } from '@/hooks/usePharmacy';
 import { usePatients, useVisits } from '@/hooks/useClinical';
 import { useFacilityType } from '@/lib/facility-nomenclature';
-import type { CreatePrescriptionInput, PrescriptionLineInput, PrescriptionStatus } from '@/lib/api/pharmacy';
+import { pharmacyApi } from '@/lib/api/pharmacy';
+import type { CreatePrescriptionInput, DrugSearchItem, PrescriptionLineInput, PrescriptionStatus } from '@/lib/api/pharmacy';
 
 const STATUS_LABELS: Record<PrescriptionStatus, string> = {
   pending: 'Pending',
@@ -66,7 +68,12 @@ function emptyLine(): DraftLine {
 
 // ─── New Prescription modal ─────────────────────────────────────────────────
 
-function NewPrescriptionModal({ onClose }: { onClose: () => void }) {
+function drugToOption(item: DrugSearchItem): ComboboxOption {
+  const hintParts = [item.sku, item.strength].filter(Boolean);
+  return { value: item.sku, label: item.name, hint: hintParts.join(' · ') };
+}
+
+function NewPrescriptionModal({ orgSlug, onClose }: { orgSlug: string; onClose: () => void }) {
   const createPrescription = useCreatePrescription();
   const { data: patients, isLoading: patientsLoading } = usePatients();
   const { data: visits, isLoading: visitsLoading } = useVisits();
@@ -80,12 +87,39 @@ function NewPrescriptionModal({ onClose }: { onClose: () => void }) {
   const [prescriberLicense, setPrescriberLicense] = useState('');
   const [allergyFlags, setAllergyFlags] = useState('');
   const [lines, setLines] = useState<DraftLine[]>([emptyLine()]);
+  // Populated as SearchableCombobox's onRemoteSearch runs, so onChange (which only receives the
+  // trimmed ComboboxOption) can look back up the full DrugSearchItem to auto-fill dosage/price.
+  const drugCacheRef = useRef<Map<string, DrugSearchItem>>(new Map());
 
   const updateLine = (idx: number, field: keyof DraftLine, value: string) => {
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, [field]: value } : l)));
   };
   const addLine = () => setLines((prev) => [...prev, emptyLine()]);
   const removeLine = (idx: number) => setLines((prev) => prev.filter((_, i) => i !== idx));
+  const searchDrugs = async (q: string): Promise<ComboboxOption[]> => {
+    const items = await pharmacyApi.searchDrugs(orgSlug, q);
+    items.forEach((item) => drugCacheRef.current.set(item.sku, item));
+    return items.map(drugToOption);
+  };
+  // Selecting a real catalog item auto-fills dosage/unit price — still fully editable afterward,
+  // so a genuinely uncataloged item can still be entered by hand as before.
+  const handleSelectDrug = (idx: number, sku: string) => {
+    const item = drugCacheRef.current.get(sku);
+    setLines((prev) =>
+      prev.map((l, i) => {
+        if (i !== idx) return l;
+        if (!item) return { ...l, inventory_item_sku: sku };
+        return {
+          ...l,
+          inventory_item_sku: item.sku,
+          drug_name: item.name,
+          dosage: [item.strength, item.dosage_form].filter(Boolean).join(' '),
+          form: item.dosage_form ?? l.form,
+          unit_price: item.selling_price != null ? String(item.selling_price) : l.unit_price,
+        };
+      })
+    );
+  };
 
   const handleSubmit = async () => {
     if (!prescriberName.trim()) {
@@ -259,6 +293,21 @@ function NewPrescriptionModal({ onClose }: { onClose: () => void }) {
                     </button>
                   )}
                 </div>
+                <div>
+                  <label className={labelCls}>Search Catalog</label>
+                  <SearchableCombobox
+                    options={[]}
+                    value={line.inventory_item_sku}
+                    valueLabel={line.drug_name || undefined}
+                    onChange={(value) => handleSelectDrug(idx, value)}
+                    onRemoteSearch={searchDrugs}
+                    remoteThreshold={5}
+                    placeholder="Search drugs by name…"
+                    searchPlaceholder="Type at least 2 characters…"
+                    emptyText="No match — enter the drug manually below"
+                    clearable
+                  />
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>
@@ -268,7 +317,7 @@ function NewPrescriptionModal({ onClose }: { onClose: () => void }) {
                   </div>
                   <div>
                     <label className={labelCls}>Inventory SKU</label>
-                    <Input value={line.inventory_item_sku} onChange={(e) => updateLine(idx, 'inventory_item_sku', e.target.value)} placeholder="Optional" />
+                    <Input value={line.inventory_item_sku} onChange={(e) => updateLine(idx, 'inventory_item_sku', e.target.value)} placeholder="Optional — auto-filled by catalog search" />
                   </div>
                   <div>
                     <label className={labelCls}>Dosage</label>
@@ -432,7 +481,7 @@ export default function PharmacyPage() {
         )}
       </Card>
 
-      {createOpen && <NewPrescriptionModal onClose={() => setCreateOpen(false)} />}
+      {createOpen && <NewPrescriptionModal orgSlug={orgSlug} onClose={() => setCreateOpen(false)} />}
     </div>
   );
 }
