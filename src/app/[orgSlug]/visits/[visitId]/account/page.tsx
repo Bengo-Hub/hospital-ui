@@ -28,10 +28,9 @@ import type { BillableCharge, ChargeStatus, PatientAccount, PaymentMethod } from
 
 // This page is deliberately visit-scoped (matches useAccountByVisit's contract, which takes a
 // VISIT id, not a patient id — a patient's OPD account resets per visit while an admission's
-// spans the whole stay). hospital-ui has no Patients/Visits list UI yet (Phase 6, still
-// comingSoon in the sidebar), so for now this route is reached by direct URL / a future link
-// from a visit detail page rather than site navigation — see the migration report for the full
-// route-choice rationale.
+// spans the whole stay). It has no sidebar entry of its own — it's reached by drilling in from
+// the Visits list (visits/page.tsx, added 2026-09-03) or a patient's Visit History table
+// (patients/[id]/page.tsx), both of which link an "Account" action straight to this route.
 
 const CHARGE_STATUS_BADGE: Record<ChargeStatus, 'default' | 'success' | 'warning' | 'error' | 'outline'> = {
   pending: 'warning',

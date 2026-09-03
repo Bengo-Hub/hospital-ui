@@ -102,6 +102,16 @@ export const NAV_ENTRIES: NavEntry[] = [
       { label: 'Patient Registration', icon: UserPlus, href: '/patients', permission: P.RECORDS_VIEW },
       { label: 'Triage', icon: HeartPulse, href: '/triage', permission: P.TRIAGE_VIEW },
       { label: 'Consultation Queue', icon: Stethoscope, href: '/consultation/queue', permission: P.CONSULTATION_VIEW },
+      // Visits (2026-09-03 completeness-audit gap-fill): the cross-patient, cross-status visit
+      // list — closes the gap where 5 of 10 VisitStatus values were never shown anywhere outside
+      // a single patient's chart. Also the list Billing's per-visit account page was missing
+      // (see that page's own note below) — its rows deep-link into visits/[visitId]/account.
+      { label: 'Visits', icon: ClipboardList, href: '/visits', permission: P.RECORDS_VIEW },
+      // Diagnosis Catalog (2026-09-03 completeness-audit gap-fill): previously only reachable via
+      // the "+ Catalog" button buried inside Consultation's examination form. Catalog requires
+      // the stricter MANAGE permission, matching Laboratory's Worklist/Catalog split above and
+      // this page's own in-page create gate.
+      { label: 'Diagnosis Catalog', icon: Settings, href: '/consultation/diagnosis-catalog', permission: P.CONSULTATION_MANAGE },
     ],
   },
 
@@ -135,11 +145,13 @@ export const NAV_ENTRIES: NavEntry[] = [
   },
 
   // Billing: the cashier "collect any department's charge" queue, plus the item-catalog admin
-  // page (2026-08-30). The patient-account-ledger page (/visits/[visitId]/account) still has no
-  // list to link from yet, so it stays unlinked from the sidebar until a Patients/Visits list can
-  // deep-link into it. Collect Charges is gated on COLLECT_ANY (not the broader BILLING_VIEW)
-  // since that's the one thing that page is for — a department that only collects its OWN
-  // charges (collect_own) reaches billing through its own module's pages, not this queue.
+  // page (2026-08-30). The patient-account-ledger page (/visits/[visitId]/account) is still not
+  // a sidebar entry of its own — it's visit-scoped, not something to browse independently — but
+  // as of the OPD group's Visits page above (2026-09-03) it's no longer an orphaned route: every
+  // visit row there, and every row in a patient's Visit History, deep-links into it. Collect
+  // Charges is gated on COLLECT_ANY (not the broader BILLING_VIEW) since that's the one thing
+  // that page is for — a department that only collects its OWN charges (collect_own) reaches
+  // billing through its own module's pages, not this queue.
   {
     label: 'Billing',
     icon: Banknote,
