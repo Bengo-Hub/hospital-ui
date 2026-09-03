@@ -23,18 +23,20 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { FlaskConical, HeartPulse, Loader2, Pill, Stethoscope, X } from 'lucide-react';
+import { FlaskConical, HeartPulse, Loader2, Pill, Plus, Stethoscope, X } from 'lucide-react';
 import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
 import { PageHeader, EmptyState, Skeleton } from '@/components/ui/page';
 import { Card } from '@/components/ui/base';
 import { Can } from '@/components/auth/can';
+import { useAppPermissions } from '@/hooks/use-app-permissions';
 import { VisitStatusBadge } from '@/components/clinical/visit-status-badge';
 import { AcuityBadge, latestTriageRecord } from '@/components/clinical/acuity-badge';
 import { TriageModal, inputCls, labelCls } from '@/components/clinical/triage-modal';
+import { CreateDiagnosisModal } from '@/components/clinical/create-diagnosis-modal';
 import { VisitChargesPanel } from '@/components/billing/visit-charges-panel';
 import {
   useVisits, usePatient, useRecordExamination, useLatestExamination, useDiagnosisCatalog,
-  useCreateDiagnosisEntry, useCreateReferral, useReferrals, useCancelReferral,
+  useCreateReferral, useReferrals, useCancelReferral,
 } from '@/hooks/useClinical';
 import { apiErrorMessage } from '@/lib/api/error-message';
 import type { PatientVisit, QueueType, ReferredTo } from '@/lib/api/clinical';
@@ -87,15 +89,15 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
   const { data: latestExam } = useLatestExamination(visit.id);
   const recordExamination = useRecordExamination();
   const createReferral = useCreateReferral();
-  const createDiagnosisEntry = useCreateDiagnosisEntry();
   const { data: referrals = [] } = useReferrals(visit.id);
   const cancelReferral = useCancelReferral();
+  const { can } = useAppPermissions();
 
   const [queueType, setQueueType] = useState<QueueType>('doctor');
   const [chiefComplaint, setChiefComplaint] = useState(visit.chief_complaint ?? '');
   const [diagnosisCode, setDiagnosisCode] = useState('');
   const [diagnosisName, setDiagnosisName] = useState('');
-  const [manualDiagnosis, setManualDiagnosis] = useState('');
+  const [showCreateDiagnosis, setShowCreateDiagnosis] = useState(false);
   const [reviewOfSystems, setReviewOfSystems] = useState<Record<string, string>>({});
   const [physicalExamFindings, setPhysicalExamFindings] = useState<Record<string, string>>({});
   const [treatmentPlan, setTreatmentPlan] = useState('');
@@ -122,10 +124,7 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
   }));
 
   const handleSubmit = async (complete: boolean) => {
-    const finalDiagnosisName = manualDiagnosis.trim() || diagnosisName || undefined;
-    const finalDiagnosisCode = manualDiagnosis.trim() ? undefined : (diagnosisCode || undefined);
-
-    if (complete && !finalDiagnosisName) {
+    if (complete && !diagnosisName) {
       toast.error('Enter or select a diagnosis before marking as diagnosed');
       return;
     }
@@ -136,8 +135,8 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
         data: {
           queue_type: queueType,
           chief_complaint: chiefComplaint || undefined,
-          diagnosis_code: finalDiagnosisCode,
-          diagnosis_name: finalDiagnosisName,
+          diagnosis_code: diagnosisCode || undefined,
+          diagnosis_name: diagnosisName || undefined,
           review_of_systems: Object.keys(reviewOfSystems).length ? reviewOfSystems : undefined,
           physical_exam_findings: Object.keys(physicalExamFindings).length ? physicalExamFindings : undefined,
           treatment_plan: treatmentPlan || undefined,
@@ -145,8 +144,8 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
           complete,
         },
       });
-      if (finalDiagnosisName) {
-        setRecordedDiagnosis(finalDiagnosisName);
+      if (diagnosisName) {
+        setRecordedDiagnosis(diagnosisName);
         toast.success(complete ? 'Examination completed — diagnosis recorded' : 'Examination saved with diagnosis');
       } else {
         toast.success('Examination saved — still in progress');
@@ -285,55 +284,32 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
                 <SearchableCombobox
                   options={diagnosisOptions}
                   value={diagnosisCode}
+                  valueLabel={diagnosisName || undefined}
                   onChange={(value, option) => {
                     setDiagnosisCode(value);
                     setDiagnosisName(option?.label ?? value);
                   }}
                   placeholder="Search diagnosis catalogue…"
                   searchPlaceholder="Search by name or code…"
-                  emptyText="No matching diagnosis — enter one manually below"
+                  emptyText="No matching diagnosis — add it to the catalogue below"
                   clearable
+                  footer={
+                    can('hospital.consultation.manage') ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowCreateDiagnosis(true)}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-primary hover:bg-muted/60"
+                      >
+                        <Plus className="h-4 w-4" /> Add to catalog
+                      </button>
+                    ) : undefined
+                  }
                 />
                 {latestExam && (latestExam.diagnosis_history?.length ?? 0) > 0 && (
                   <p className="text-[11px] text-muted-foreground mt-1">
                     Previously: {latestExam.diagnosis_history!.map((h) => h.name || h.code).filter(Boolean).join(' → ')}
                   </p>
                 )}
-              </div>
-              <div>
-                <label className={labelCls}>Or enter diagnosis manually</label>
-                <div className="flex gap-2">
-                  <input
-                    value={manualDiagnosis}
-                    onChange={(e) => setManualDiagnosis(e.target.value)}
-                    className={inputCls}
-                    placeholder="Free-text diagnosis if not in the catalogue…"
-                  />
-                  <Can permission="hospital.consultation.manage">
-                    <button
-                      type="button"
-                      disabled={!manualDiagnosis.trim() || createDiagnosisEntry.isPending}
-                      onClick={async () => {
-                        try {
-                          await createDiagnosisEntry.mutateAsync({
-                            code: manualDiagnosis.trim().toUpperCase().replace(/\s+/g, '_').slice(0, 40),
-                            name: manualDiagnosis.trim(),
-                          });
-                          toast.success('Added to diagnosis catalogue for future use');
-                        } catch (e) {
-                          toast.error(await apiErrorMessage(e, 'Failed to add to catalogue'));
-                        }
-                      }}
-                      className="shrink-0 px-3 rounded-xl border border-border text-xs font-semibold hover:bg-accent transition-colors disabled:opacity-40"
-                      title="Add this diagnosis to the tenant catalogue so it appears in the search above next time"
-                    >
-                      + Catalog
-                    </button>
-                  </Can>
-                </div>
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  If filled in, this overrides the catalogue selection above.
-                </p>
               </div>
               <div>
                 <label className={labelCls}>Physical Exam Findings</label>
@@ -384,6 +360,16 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
         )}
       </div>
       {showRecheckVitals && <TriageModal visit={visit} onClose={() => setShowRecheckVitals(false)} />}
+      {showCreateDiagnosis && (
+        <CreateDiagnosisModal
+          onClose={() => setShowCreateDiagnosis(false)}
+          onCreated={(entry) => {
+            setDiagnosisCode(entry.code);
+            setDiagnosisName(entry.name);
+            setShowCreateDiagnosis(false);
+          }}
+        />
+      )}
     </div>
   );
 }

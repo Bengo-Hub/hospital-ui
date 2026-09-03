@@ -9,6 +9,7 @@ import { PdfPreview, useDocumentPreview } from '@bengo-hub/shared-ui-lib/documen
 import { Card, Button, Badge, Input } from '@/components/ui/base';
 import { PageHeader, StatCard, EmptyState, Skeleton } from '@/components/ui/page';
 import { Can } from '@/components/auth/can';
+import { CreatableSelect } from '@/components/ui/creatable-select';
 import { apiErrorMessage } from '@/lib/api/error-message';
 import { useFacilityType } from '@/lib/facility-nomenclature';
 import {
@@ -157,20 +158,15 @@ function SettleModal({ account, onClose }: { account: PatientAccount; onClose: (
           <div>
             <label className="text-xs font-semibold text-muted-foreground mb-1 block">Next of Kin (if they are settling)</label>
             {!addingKin ? (
-              <div className="flex items-center gap-2">
-                <select
-                  value={nextOfKinId}
-                  disabled={kinLoading}
-                  onChange={(e) => setNextOfKinId(e.target.value)}
-                  className="flex-1 bg-background border border-border rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60"
-                >
-                  <option value="">{kinLoading ? 'Loading…' : 'None recorded'}</option>
-                  {kin.map((k) => (
-                    <option key={k.id} value={k.id}>{k.name}{k.relationship ? ` (${k.relationship})` : ''}</option>
-                  ))}
-                </select>
-                <Button type="button" variant="outline" size="sm" onClick={() => setAddingKin(true)}>Add New</Button>
-              </div>
+              <CreatableSelect
+                value={nextOfKinId}
+                onChange={setNextOfKinId}
+                options={kin.map((k) => ({ id: k.id, name: k.name, hint: k.relationship || undefined }))}
+                placeholder={kinLoading ? 'Loading…' : 'None recorded'}
+                disabled={kinLoading}
+                onAddClick={() => setAddingKin(true)}
+                addLabel="Add new next-of-kin…"
+              />
             ) : (
               <div className="space-y-2 rounded-xl border border-border p-3">
                 <Input value={kinName} onChange={(e) => setKinName(e.target.value)} placeholder="Full name *" />

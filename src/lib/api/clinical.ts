@@ -262,6 +262,15 @@ export interface DiagnosisEntry {
   name: string;
   category?: string;
   is_global: boolean;
+  is_active?: boolean;
+}
+
+/** All fields optional (partial update) — only sent for TENANT-owned entries (is_global: false);
+ * a global entry's id 404s since global rows live in a table this endpoint never touches. */
+export interface UpdateDiagnosisEntryInput {
+  name?: string;
+  category?: string;
+  is_active?: boolean;
 }
 
 export const diagnosisCatalogApi = {
@@ -270,7 +279,12 @@ export const diagnosisCatalogApi = {
     return unwrapList(res);
   },
   create: (orgSlug: string, data: { code: string; name: string; category?: string }) =>
-    apiClient.post(`${hospitalBase(orgSlug)}/diagnosis-catalog`, data),
+    apiClient.post<DiagnosisEntry>(`${hospitalBase(orgSlug)}/diagnosis-catalog`, data),
+  update: (orgSlug: string, entryId: string, data: UpdateDiagnosisEntryInput) =>
+    apiClient.put<DiagnosisEntry>(`${hospitalBase(orgSlug)}/diagnosis-catalog/${entryId}`, data),
+  /** Tenant-owned entries only (see UpdateDiagnosisEntryInput doc) — no body, sets is_active: false. */
+  deactivate: (orgSlug: string, entryId: string) =>
+    apiClient.post<DiagnosisEntry>(`${hospitalBase(orgSlug)}/diagnosis-catalog/${entryId}/deactivate`),
 };
 
 // ── Referrals ────────────────────────────────────────────────────────────────────────────

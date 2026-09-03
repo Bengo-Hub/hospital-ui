@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import {
   patientsApi, visitsApi, triageApi, examinationApi, diagnosisCatalogApi, referralsApi,
   type RegisterPatientInput, type UpdatePatientInput, type CheckInVisitInput, type RecordTriageInput,
-  type RecordExaminationInput, type ReferredTo,
+  type RecordExaminationInput, type ReferredTo, type UpdateDiagnosisEntryInput,
 } from '@/lib/api/clinical';
 
 function useOrgSlug(): string {
@@ -158,6 +158,25 @@ export function useCreateDiagnosisEntry() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: { code: string; name: string; category?: string }) => diagnosisCatalogApi.create(orgSlug, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hospital', 'diagnosis-catalog', orgSlug] }),
+  });
+}
+
+export function useUpdateDiagnosisEntry() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ entryId, data }: { entryId: string; data: UpdateDiagnosisEntryInput }) =>
+      diagnosisCatalogApi.update(orgSlug, entryId, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hospital', 'diagnosis-catalog', orgSlug] }),
+  });
+}
+
+export function useDeactivateDiagnosisEntry() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (entryId: string) => diagnosisCatalogApi.deactivate(orgSlug, entryId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['hospital', 'diagnosis-catalog', orgSlug] }),
   });
 }
