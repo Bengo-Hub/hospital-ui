@@ -12,6 +12,7 @@ import { P } from '@/lib/rbac/permissions';
 import { apiErrorMessage } from '@/lib/api/error-message';
 import { useAdmissions, useAdmit, useWards } from '@/hooks/useInpatient';
 import { useVisits, usePatient } from '@/hooks/useClinical';
+import { useBillableItemCatalog } from '@/hooks/useBilling';
 import { inpatientApi } from '@/lib/api/inpatient';
 import type { AdmissionStatus } from '@/lib/api/inpatient';
 
@@ -32,9 +33,14 @@ function AdmitModal({ onClose }: { onClose: () => void }) {
   const orgSlug = params?.orgSlug as string;
   const { data: visits, isLoading: visitsLoading } = useVisits('registered');
   const { data: wards, isLoading: wardsLoading } = useWards();
+  const { data: catalog } = useBillableItemCatalog();
   const admit = useAdmit();
   const [visitId, setVisitId] = useState('');
   const [bedId, setBedId] = useState('');
+  const [insured, setInsured] = useState(false);
+  const [guaranteeReference, setGuaranteeReference] = useState('');
+
+  const depositItem = useMemo(() => (catalog ?? []).find((c) => c.code === 'ADMISSION_DEPOSIT' && c.is_active), [catalog]);
 
   const occupancyQueries = useQueries({
     queries: (wards ?? []).map((w) => ({
@@ -62,8 +68,16 @@ function AdmitModal({ onClose }: { onClose: () => void }) {
       toast.error('Select an available bed');
       return;
     }
+    if (insured && !guaranteeReference.trim()) {
+      toast.error('Enter the letter-of-guarantee/undertaking reference');
+      return;
+    }
     try {
-      const adm = await admit.mutateAsync({ visit_id: visitId, bed_id: bedId });
+      const adm = await admit.mutateAsync({
+        visit_id: visitId,
+        bed_id: bedId,
+        insurance_guarantee_reference: insured ? guaranteeReference.trim() : undefined,
+      });
       toast.success('Patient admitted');
       onClose();
       window.location.assign(`/${orgSlug}/admissions/${adm.id}`);
@@ -141,6 +155,35 @@ function AdmitModal({ onClose }: { onClose: () => void }) {
                     ),
                 )}
               </div>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-border p-3 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-muted-foreground">Payment on Admission</p>
+              <label className="text-xs font-medium flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" checked={insured} onChange={(e) => setInsured(e.target.checked)} />
+                Insured (letter of guarantee)
+              </label>
+            </div>
+            {insured ? (
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                  Guarantee / Undertaking Reference <span className="text-destructive">*</span>
+                </label>
+                <input
+                  value={guaranteeReference}
+                  onChange={(e) => setGuaranteeReference(e.target.value)}
+                  placeholder="e.g. SHA-LOG-2026-00123"
+                  className="w-full bg-background border border-border rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              </div>
+            ) : depositItem?.price ? (
+              <p className="text-sm">
+                A deposit of <span className="font-bold">{depositItem.price.toFixed(2)}</span> will be charged to the admission account on collection at the Billing desk.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">No admission deposit configured for this tenant.</p>
             )}
           </div>
         </div>

@@ -9,8 +9,9 @@ import { hospitalBase, unwrapList } from './types';
 export type AccountStatus = 'open' | 'settled' | 'written_off';
 export type SettlementRequiredBefore = 'nothing' | 'discharge' | 'body_release';
 /** 'exempted' = settled via an accepted insurance claim rather than cash — distinct from
- * 'waived' (a manual, no-payer write-off). */
-export type ChargeStatus = 'pending' | 'invoiced' | 'paid' | 'exempted' | 'waived' | 'written_off';
+ * 'waived' (a manual, no-payer write-off). 'refunded' = an already-paid charge was reversed via
+ * billing.Service.IssueRefund (treasury credit note). */
+export type ChargeStatus = 'pending' | 'invoiced' | 'paid' | 'exempted' | 'waived' | 'written_off' | 'refunded';
 export type PaymentMethod = 'mpesa' | 'card' | 'cash' | 'bank_transfer' | 'paystack';
 
 export interface PatientAccount {
@@ -152,6 +153,11 @@ export const billingApi = {
   },
   collectCharge: (orgSlug: string, chargeId: string, data: CollectChargeInput) =>
     apiClient.post<BillableCharge>(`${hospitalBase(orgSlug)}/billing/charges/${chargeId}/collect`, data),
+  issueRefund: (orgSlug: string, chargeId: string, reason?: string) =>
+    apiClient.post<BillableCharge>(`${hospitalBase(orgSlug)}/billing/charges/${chargeId}/refund`, { reason }),
+  /** Preview-first, mirrors pharmacyApi.downloadLabel's convention. */
+  downloadReceipt: (orgSlug: string, chargeId: string) =>
+    apiClient.getBlob(`${hospitalBase(orgSlug)}/billing/charges/${chargeId}/receipt.pdf`),
   settleAccount: (orgSlug: string, accountId: string, data: CollectChargeInput & { next_of_kin_id?: string }) =>
     apiClient.post<PatientAccount>(`${hospitalBase(orgSlug)}/billing/accounts/${accountId}/settle`, data),
   overrideSettlement: (orgSlug: string, accountId: string, reason: string) =>

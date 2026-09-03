@@ -46,6 +46,7 @@ export interface Admission {
   discharged_at?: string;
   discharged_by?: string;
   discharge_summary?: string;
+  insurance_guarantee_reference?: string;
   ward_charge_posted: boolean;
 }
 
@@ -69,6 +70,7 @@ export interface CreateBedInput {
 export interface AdmitInput {
   visit_id: string;
   bed_id: string;
+  insurance_guarantee_reference?: string;
 }
 
 export interface TransferInput {

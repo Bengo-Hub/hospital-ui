@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { AlertOctagon, Banknote, CreditCard, Loader2, Receipt, ShieldAlert, ShieldCheck, Wallet, X } from 'lucide-react';
+import { AlertOctagon, Banknote, CreditCard, Download, Loader2, Receipt, RotateCcw, ShieldAlert, ShieldCheck, Wallet, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { PdfPreview, useDocumentPreview } from '@bengo-hub/shared-ui-lib/documents';
 import { Card, Button, Badge, Input } from '@/components/ui/base';
 import { PageHeader, StatCard, EmptyState, Skeleton } from '@/components/ui/page';
 import { Can } from '@/components/auth/can';
@@ -13,6 +14,7 @@ import { useFacilityType } from '@/lib/facility-nomenclature';
 import {
   useAccountByVisit,
   useCollectCharge,
+  useIssueRefund,
   useSettleAccount,
   useOverrideSettlement,
   useSubmitVisitInsuranceClaim,
@@ -21,6 +23,7 @@ import {
 } from '@/hooks/useBilling';
 import { InsuranceClaimModal } from '@/components/billing/insurance-claim-modal';
 import { CollectPaymentDialog } from '@/components/billing/collect-payment-dialog';
+import { billingApi } from '@/lib/api/billing';
 import type { BillableCharge, ChargeStatus, PatientAccount, PaymentMethod } from '@/lib/api/billing';
 
 // This page is deliberately visit-scoped (matches useAccountByVisit's contract, which takes a
@@ -37,6 +40,7 @@ const CHARGE_STATUS_BADGE: Record<ChargeStatus, 'default' | 'success' | 'warning
   exempted: 'success',
   waived: 'outline',
   written_off: 'outline',
+  refunded: 'error',
 };
 
 function ChargeStatusBadge({ status }: { status: ChargeStatus }) {
@@ -306,13 +310,34 @@ function ChemistCheckoutRedirect({ orgSlug }: { orgSlug: string }) {
 // ─── Clinic/Facility/Hospital tier: full patient-account ledger ─────────────
 
 function PatientAccountLedger({ visitId, showSettlementActions }: { visitId: string; showSettlementActions: boolean }) {
+  const params = useParams();
+  const orgSlug = params?.orgSlug as string;
   const { data, isLoading } = useAccountByVisit(visitId);
   const collect = useCollectCharge();
+  const issueRefund = useIssueRefund();
   const [collectCharge, setCollectCharge] = useState<BillableCharge | null>(null);
   const [insuranceCharge, setInsuranceCharge] = useState<BillableCharge | null>(null);
   const [settleOpen, setSettleOpen] = useState(false);
   const [overrideOpen, setOverrideOpen] = useState(false);
+  const [refundingId, setRefundingId] = useState<string | null>(null);
   const submitInsuranceClaim = useSubmitVisitInsuranceClaim();
+  const { openPreview, previewProps } = useDocumentPreview({ onError: (m) => toast.error(m) });
+
+  const handleDownloadReceipt = (chargeId: string) => {
+    openPreview(() => billingApi.downloadReceipt(orgSlug, chargeId), { fileName: 'receipt.pdf', title: 'Receipt' });
+  };
+
+  const handleRefund = async (chargeId: string) => {
+    setRefundingId(chargeId);
+    try {
+      await issueRefund.mutateAsync({ chargeId });
+      toast.success('Refund issued');
+    } catch (e) {
+      toast.error(await apiErrorMessage(e, 'Failed to issue refund'));
+    } finally {
+      setRefundingId(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -425,6 +450,26 @@ function PatientAccountLedger({ visitId, showSettlementActions }: { visitId: str
                           </Can>
                         </div>
                       )}
+                      {c.status === 'paid' && (
+                        <div className="flex items-center justify-end gap-2">
+                          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handleDownloadReceipt(c.id)}>
+                            <Download className="h-3.5 w-3.5" />
+                            Receipt
+                          </Button>
+                          <Can permission="hospital.billing.manage">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10"
+                              onClick={() => handleRefund(c.id)}
+                              disabled={refundingId === c.id}
+                            >
+                              {refundingId === c.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                              Refund
+                            </Button>
+                          </Can>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -433,6 +478,8 @@ function PatientAccountLedger({ visitId, showSettlementActions }: { visitId: str
           </div>
         )}
       </Card>
+
+      <PdfPreview {...previewProps} />
 
       {collectCharge && (
         <CollectPaymentDialog

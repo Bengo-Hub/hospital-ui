@@ -87,6 +87,14 @@ Sprint 6 — Inpatient (ward/bed occupancy board; discharge flow gains the balan
 
 ## Gap audit and MVP backlog candidates (2026-09-02)
 
+**Shipped 2026-09-03**: the Admit modal (`/admissions` page) shows the configured deposit amount
+(via `useBillableItemCatalog`, matching on `ADMISSION_DEPOSIT`) or, when the "Insured" toggle is
+checked, a required guarantee/undertaking-reference field instead — mutually exclusive, matching
+the backend. `PatientAccountLedger` (`/visits/[visitId]/account`) gained a "Receipt" download
+action (reusing the `useDocumentPreview`/`PdfPreview` pattern already used for pharmacy label
+downloads) and an "Issue refund" action, both shown per-charge once `status === 'paid'`, next to
+the existing "Collect Now"/"Insurance" actions.
+
 UI-side mirror of the completeness audit in `hospital-api/docs/sprints/
 sprint-5-billing-insurance.md`'s own "Gap audit" section, read that first for the full backend
 detail and research citations. All items below are **proposed, not yet built**, except the last,

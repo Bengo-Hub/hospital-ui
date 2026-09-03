@@ -58,6 +58,19 @@ export function useCollectCharge() {
   });
 }
 
+export function useIssueRefund() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ chargeId, reason }: { chargeId: string; reason?: string }) =>
+      billingApi.issueRefund(orgSlug, chargeId, reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['hospital', 'account', orgSlug] });
+      qc.invalidateQueries({ queryKey: ['hospital', 'admission-account', orgSlug] });
+    },
+  });
+}
+
 export function useSettleAccount() {
   const orgSlug = useOrgSlug();
   const qc = useQueryClient();

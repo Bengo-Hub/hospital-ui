@@ -30,6 +30,7 @@ const CHARGE_STATUS_BADGE: Record<ChargeStatus, 'default' | 'success' | 'warning
   exempted: 'success',
   waived: 'outline',
   written_off: 'outline',
+  refunded: 'error',
 };
 
 function ChargeStatusBadge({ status }: { status: ChargeStatus }) {
