@@ -47,9 +47,13 @@
 ## Gap audit — UI implications (2026-09-02, later the same day)
 
 `hospital-api/docs/sprints/sprint-7-theatre-icu.md` gained a matching "Gap audit and Sprint 7.1
-candidates" section after a client review flagged missing Theatre sub-modules. **Everything below is
-a UI-side implication of that backend proposal — none of it is built, and it depends on the
-corresponding backend fields shipping first.**
+candidates" section after a client review flagged missing Theatre sub-modules.
+
+**Shipped 2026-09-03**: the WHO-checklist reshape (`CHECKLIST_ITEMS`, phase-grouped by `sign_in`/
+`time_out`/`sign_out`), and one consolidated `BookingDetailsModal` (Team / PACU / Op Note) on the
+theatre schedule page covering surgical-team assignment (with conflict rejection surfaced as a
+toast), PACU admit/discharge, and the operative-note form — one entry point rather than three
+separate ones, since all three are booking-scoped clinical actions reached from the same place.
 
 - **WHO-checklist-shaped pre-op checklist.** The pre-op checklist modal's current flat list (consent
   signed, site marked, anaesthesia reviewed, blood availability, equipment ready) is replaced by the

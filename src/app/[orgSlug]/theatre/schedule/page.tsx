@@ -11,6 +11,8 @@ import {
   Plus,
   Scissors,
   Stethoscope,
+  Trash2,
+  Users,
   X,
   XCircle,
   Zap,
@@ -32,8 +34,16 @@ import {
   useStartSurgery,
   useCompleteSurgery,
   useCancelBooking,
+  useStaffAssignments,
+  useAssignStaff,
+  useRemoveStaffAssignment,
+  usePacuStays,
+  useAdmitToPacu,
+  useDischargeFromPacu,
+  useOperativeNote,
+  useRecordOperativeNote,
 } from '@/hooks/useTheatre';
-import type { TheatreBooking, TheatreBookingStatus } from '@/lib/api/theatre';
+import type { PacuDisposition, TheatreBooking, TheatreBookingStatus, TheatreStaffRole } from '@/lib/api/theatre';
 
 const STATUS_BADGE: Record<TheatreBookingStatus, { variant: 'default' | 'success' | 'warning' | 'error' | 'outline'; label: string }> = {
   awaiting_payment: { variant: 'warning', label: 'Awaiting Payment' },
@@ -43,13 +53,40 @@ const STATUS_BADGE: Record<TheatreBookingStatus, { variant: 'default' | 'success
   cancelled: { variant: 'error', label: 'Cancelled' },
 };
 
-const CHECKLIST_ITEMS = [
-  { key: 'consent_signed', label: 'Consent signed' },
-  { key: 'site_marked', label: 'Surgical site marked' },
-  { key: 'anaesthesia_reviewed', label: 'Anaesthesia plan reviewed' },
-  { key: 'blood_available', label: 'Blood availability confirmed (if required)' },
-  { key: 'equipment_ready', label: 'Equipment/instruments ready' },
+// The real WHO Surgical Safety Checklist (verbatim, revised 1/2009, ©WHO 2009), replacing the 5
+// items this page invented for the original Sprint 7 pass — see sprint-7-theatre-icu.md's own Gap
+// audit section, which reproduces the full source text. Stored as a flat map[string]bool (the
+// backend field's actual type, unchanged — see hospital-api's TheatreBooking.checklist doc
+// comment); phase grouping is a pure UI concern via each item's own `phase` key, not a schema
+// change. WHO's own footer: "This checklist is not intended to be comprehensive. Additions and
+// modifications to fit local practice are encouraged."
+const CHECKLIST_ITEMS: { key: string; phase: 'sign_in' | 'time_out' | 'sign_out'; label: string }[] = [
+  // Sign In — before induction of anaesthesia (at least nurse and anaesthetist)
+  { key: 'sign_in_identity_site_procedure_consent', phase: 'sign_in', label: 'Patient has confirmed identity, site, procedure, and consent' },
+  { key: 'sign_in_site_marked', phase: 'sign_in', label: 'Site is marked (or not applicable)' },
+  { key: 'sign_in_anaesthesia_machine_check', phase: 'sign_in', label: 'Anaesthesia machine and medication check complete' },
+  { key: 'sign_in_pulse_oximeter_functioning', phase: 'sign_in', label: 'Pulse oximeter on patient and functioning' },
+  { key: 'sign_in_known_allergy', phase: 'sign_in', label: 'Does patient have a known allergy?' },
+  { key: 'sign_in_difficult_airway_risk', phase: 'sign_in', label: 'Difficult airway/aspiration risk? (equipment/assistance available if yes)' },
+  { key: 'sign_in_blood_loss_risk', phase: 'sign_in', label: 'Risk of >500mL blood loss (7mL/kg in children)? (IV access/fluids planned if yes)' },
+  // Time Out — before skin incision (nurse, anaesthetist, and surgeon)
+  { key: 'time_out_team_introduced', phase: 'time_out', label: 'All team members have introduced themselves by name and role' },
+  { key: 'time_out_confirmed_patient_procedure_site', phase: 'time_out', label: "Confirmed patient's name, procedure, and incision site" },
+  { key: 'time_out_antibiotic_prophylaxis', phase: 'time_out', label: 'Antibiotic prophylaxis given within the last 60 minutes (or not applicable)' },
+  { key: 'time_out_surgeon_critical_steps', phase: 'time_out', label: 'Surgeon has reviewed critical/non-routine steps, case duration, anticipated blood loss' },
+  { key: 'time_out_anaesthetist_concerns', phase: 'time_out', label: 'Anaesthetist has reviewed any patient-specific concerns' },
+  { key: 'time_out_sterility_confirmed', phase: 'time_out', label: 'Nursing team has confirmed sterility (including indicator results), equipment issues/concerns' },
+  { key: 'time_out_imaging_displayed', phase: 'time_out', label: 'Essential imaging is displayed (or not applicable)' },
+  // Sign Out — before the patient leaves the operating room (nurse, anaesthetist, and surgeon)
+  { key: 'sign_out_nurse_confirms_counts_and_specimens', phase: 'sign_out', label: 'Nurse verbally confirms procedure name, instrument/sponge/needle counts, specimen labelling, equipment problems' },
+  { key: 'sign_out_recovery_concerns_discussed', phase: 'sign_out', label: 'Team has discussed key concerns for recovery and management of this patient' },
 ];
+
+const CHECKLIST_PHASE_LABELS: Record<'sign_in' | 'time_out' | 'sign_out', string> = {
+  sign_in: 'Sign In — before induction of anaesthesia',
+  time_out: 'Time Out — before skin incision',
+  sign_out: 'Sign Out — before leaving the operating room',
+};
 
 function NewBookingModal({ onClose }: { onClose: () => void }) {
   const { data: visits, isLoading: visitsLoading } = useVisits();
@@ -190,17 +227,24 @@ function ChecklistModal({ booking, onClose }: { booking: TheatreBooking; onClose
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="p-6 space-y-2">
-          {CHECKLIST_ITEMS.map((item) => (
-            <label key={item.key} className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm cursor-pointer hover:bg-accent/40">
-              <input
-                type="checkbox"
-                checked={!!checklist[item.key]}
-                onChange={(e) => setChecklist((prev) => ({ ...prev, [item.key]: e.target.checked }))}
-                className="h-4 w-4 rounded border-border"
-              />
-              {item.label}
-            </label>
+        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+          {(['sign_in', 'time_out', 'sign_out'] as const).map((phase) => (
+            <div key={phase}>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">{CHECKLIST_PHASE_LABELS[phase]}</p>
+              <div className="space-y-1">
+                {CHECKLIST_ITEMS.filter((item) => item.phase === phase).map((item) => (
+                  <label key={item.key} className="flex items-start gap-3 px-3 py-2 rounded-xl text-sm cursor-pointer hover:bg-accent/40">
+                    <input
+                      type="checkbox"
+                      checked={!!checklist[item.key]}
+                      onChange={(e) => setChecklist((prev) => ({ ...prev, [item.key]: e.target.checked }))}
+                      className="h-4 w-4 rounded border-border mt-0.5 shrink-0"
+                    />
+                    <span>{item.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
         <div className="flex gap-3 px-6 pb-6">
@@ -217,11 +261,242 @@ function ChecklistModal({ booking, onClose }: { booking: TheatreBooking; onClose
   );
 }
 
+const STAFF_ROLE_OPTIONS: { value: TheatreStaffRole; label: string }[] = [
+  { value: 'surgeon', label: 'Surgeon' },
+  { value: 'assistant_surgeon', label: 'Assistant Surgeon' },
+  { value: 'anaesthetist', label: 'Anaesthetist' },
+  { value: 'scrub_nurse', label: 'Scrub Nurse' },
+  { value: 'circulating_nurse', label: 'Circulating Nurse' },
+  { value: 'other', label: 'Other' },
+];
+
+const PACU_DISPOSITION_OPTIONS: { value: PacuDisposition; label: string }[] = [
+  { value: 'to_ward', label: 'To Ward' },
+  { value: 'to_icu', label: 'To ICU' },
+  { value: 'home', label: 'Home' },
+  { value: 'deceased', label: 'Deceased' },
+];
+
+function TeamSection({ bookingId }: { bookingId: string }) {
+  const { data: assignments } = useStaffAssignments(bookingId);
+  const assign = useAssignStaff();
+  const remove = useRemoveStaffAssignment();
+  const [staffUserId, setStaffUserId] = useState('');
+  const [role, setRole] = useState<TheatreStaffRole>('assistant_surgeon');
+
+  const handleAssign = async () => {
+    if (!staffUserId.trim()) {
+      toast.error('Enter the staff member’s user ID');
+      return;
+    }
+    try {
+      await assign.mutateAsync({ bookingId, data: { staff_user_id: staffUserId.trim(), role } });
+      setStaffUserId('');
+      toast.success('Team member assigned');
+    } catch (e) {
+      toast.error(await apiErrorMessage(e, 'Failed to assign staff — check for a scheduling conflict'));
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      {(assignments ?? []).map((a) => (
+        <div key={a.id} className="flex items-center justify-between text-sm border-b border-border/60 pb-1.5">
+          <span>{STAFF_ROLE_OPTIONS.find((r) => r.value === a.role)?.label ?? a.role} — <span className="font-mono text-xs text-muted-foreground">{a.staff_user_id}</span></span>
+          <button onClick={() => remove.mutateAsync({ bookingId, assignmentId: a.id })} className="text-destructive hover:opacity-70">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ))}
+      <div className="flex gap-2 pt-1">
+        <input
+          value={staffUserId}
+          onChange={(e) => setStaffUserId(e.target.value)}
+          placeholder="Staff user ID"
+          className="flex-1 bg-background border border-border rounded-lg py-1.5 px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
+        />
+        <select
+          value={role}
+          onChange={(e) => setRole(e.target.value as TheatreStaffRole)}
+          className="bg-background border border-border rounded-lg py-1.5 px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
+        >
+          {STAFF_ROLE_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+        <Button size="sm" className="gap-1.5" onClick={handleAssign} disabled={assign.isPending}>
+          {assign.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+          Add
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function PacuSection({ bookingId }: { bookingId: string }) {
+  const { data: stays } = usePacuStays(bookingId);
+  const admit = useAdmitToPacu();
+  const discharge = useDischargeFromPacu();
+  const [bayLabel, setBayLabel] = useState('');
+  const [disposition, setDisposition] = useState<PacuDisposition>('to_ward');
+  const activeStay = (stays ?? []).find((s) => !s.discharged_at);
+
+  const handleAdmit = async () => {
+    try {
+      await admit.mutateAsync({ bookingId, data: { bay_label: bayLabel.trim() || undefined } });
+      toast.success('Admitted to PACU');
+    } catch (e) {
+      toast.error(await apiErrorMessage(e, 'Failed to admit to PACU'));
+    }
+  };
+
+  const handleDischarge = async () => {
+    if (!activeStay) return;
+    try {
+      await discharge.mutateAsync({ pacuStayId: activeStay.id, data: { disposition } });
+      toast.success('Discharged from PACU');
+    } catch (e) {
+      toast.error(await apiErrorMessage(e, 'Failed to discharge from PACU'));
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      {(stays ?? []).map((s) => (
+        <div key={s.id} className="text-sm border-b border-border/60 pb-1.5">
+          <p>{s.bay_label || 'PACU'} — admitted {new Date(s.admitted_at).toLocaleString()}</p>
+          {s.discharged_at ? (
+            <p className="text-xs text-muted-foreground">Discharged {new Date(s.discharged_at).toLocaleString()} ({s.discharge_disposition})</p>
+          ) : (
+            <p className="text-xs text-amber-600 dark:text-amber-400">In PACU</p>
+          )}
+        </div>
+      ))}
+      {activeStay ? (
+        <div className="flex gap-2 pt-1">
+          <select
+            value={disposition}
+            onChange={(e) => setDisposition(e.target.value as PacuDisposition)}
+            className="flex-1 bg-background border border-border rounded-lg py-1.5 px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            {PACU_DISPOSITION_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <Button size="sm" className="gap-1.5" onClick={handleDischarge} disabled={discharge.isPending}>
+            {discharge.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Discharge from PACU
+          </Button>
+        </div>
+      ) : (
+        <div className="flex gap-2 pt-1">
+          <input
+            value={bayLabel}
+            onChange={(e) => setBayLabel(e.target.value)}
+            placeholder="Bay label (optional)"
+            className="flex-1 bg-background border border-border rounded-lg py-1.5 px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+          <Button size="sm" className="gap-1.5" onClick={handleAdmit} disabled={admit.isPending}>
+            {admit.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Admit to PACU
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OperativeNoteSection({ bookingId }: { bookingId: string }) {
+  const { data: existing } = useOperativeNote(bookingId);
+  const record = useRecordOperativeNote();
+  const [procedurePerformed, setProcedurePerformed] = useState(existing?.procedure_performed ?? '');
+  const [findings, setFindings] = useState(existing?.findings ?? '');
+  const [complications, setComplications] = useState(existing?.complications ?? '');
+  const [bloodLoss, setBloodLoss] = useState(existing?.estimated_blood_loss_ml?.toString() ?? '');
+  const [implants, setImplants] = useState(existing?.implants_used ?? '');
+  const [postOpDiagnosis, setPostOpDiagnosis] = useState(existing?.post_op_diagnosis ?? '');
+
+  const handleSave = async () => {
+    if (!procedurePerformed.trim()) {
+      toast.error('Procedure performed is required');
+      return;
+    }
+    try {
+      await record.mutateAsync({
+        bookingId,
+        data: {
+          procedure_performed: procedurePerformed.trim(),
+          findings: findings.trim() || undefined,
+          complications: complications.trim() || undefined,
+          estimated_blood_loss_ml: bloodLoss.trim() ? Number(bloodLoss) : undefined,
+          implants_used: implants.trim() || undefined,
+          post_op_diagnosis: postOpDiagnosis.trim() || undefined,
+        },
+      });
+      toast.success('Operative note saved');
+    } catch (e) {
+      toast.error(await apiErrorMessage(e, 'Failed to save operative note'));
+    }
+  };
+
+  const inputCls = 'w-full bg-background border border-border rounded-lg py-1.5 px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40';
+
+  return (
+    <div className="space-y-2">
+      <input placeholder="Procedure performed *" value={procedurePerformed} onChange={(e) => setProcedurePerformed(e.target.value)} className={inputCls} />
+      <textarea placeholder="Findings" value={findings} onChange={(e) => setFindings(e.target.value)} rows={2} className={`${inputCls} resize-none`} />
+      <textarea placeholder="Complications" value={complications} onChange={(e) => setComplications(e.target.value)} rows={2} className={`${inputCls} resize-none`} />
+      <div className="grid grid-cols-2 gap-2">
+        <input placeholder="Est. blood loss (mL)" type="number" value={bloodLoss} onChange={(e) => setBloodLoss(e.target.value)} className={inputCls} />
+        <input placeholder="Implants used" value={implants} onChange={(e) => setImplants(e.target.value)} className={inputCls} />
+      </div>
+      <input placeholder="Post-op diagnosis" value={postOpDiagnosis} onChange={(e) => setPostOpDiagnosis(e.target.value)} className={inputCls} />
+      <Button size="sm" className="gap-1.5" onClick={handleSave} disabled={record.isPending}>
+        {record.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+        {existing ? 'Update Operative Note' : 'Save Operative Note'}
+      </Button>
+    </div>
+  );
+}
+
+function BookingDetailsModal({ booking, onClose }: { booking: TheatreBooking; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-card rounded-2xl border border-border w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <h3 className="font-bold text-base">{booking.surgery_type} — {booking.theatre_room}</h3>
+          <button onClick={onClose} className="h-9 w-9 rounded-xl flex items-center justify-center hover:bg-accent">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="p-6 space-y-5 overflow-y-auto">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Surgical Team</p>
+            <TeamSection bookingId={booking.id} />
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">PACU (Recovery)</p>
+            <PacuSection bookingId={booking.id} />
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Operative Note</p>
+            <OperativeNoteSection bookingId={booking.id} />
+          </div>
+        </div>
+        <div className="px-6 pb-6 pt-2 border-t border-border shrink-0">
+          <Button variant="outline" className="w-full" onClick={onClose}>Close</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TheatreSchedulePage() {
   const [date, setDate] = useState('');
   const { data: bookings, isLoading } = useTheatreSchedule(date || undefined);
   const [newOpen, setNewOpen] = useState(false);
   const [checklistBooking, setChecklistBooking] = useState<TheatreBooking | null>(null);
+  const [detailsBooking, setDetailsBooking] = useState<TheatreBooking | null>(null);
   const [equipmentBooking, setEquipmentBooking] = useState<TheatreBooking | null>(null);
   const [cancelTarget, setCancelTarget] = useState<TheatreBooking | null>(null);
 
@@ -375,6 +650,14 @@ export default function TheatreSchedulePage() {
                               </Button>
                             </Can>
                           )}
+                          {b.status !== 'cancelled' && (
+                            <Can permission={P.THEATRE_VIEW}>
+                              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setDetailsBooking(b)}>
+                                <Users className="h-3.5 w-3.5" />
+                                Team / PACU / Op Note
+                              </Button>
+                            </Can>
+                          )}
                           {(b.status === 'scheduled' || b.status === 'awaiting_payment') && (
                             <Can permission={P.THEATRE_MANAGE}>
                               <Button
@@ -401,6 +684,7 @@ export default function TheatreSchedulePage() {
 
       {newOpen && <NewBookingModal onClose={() => setNewOpen(false)} />}
       {checklistBooking && <ChecklistModal booking={checklistBooking} onClose={() => setChecklistBooking(null)} />}
+      {detailsBooking && <BookingDetailsModal booking={detailsBooking} onClose={() => setDetailsBooking(null)} />}
       {equipmentBooking && (
         <EquipmentPickerModal
           title={`${equipmentBooking.surgery_type} — ${equipmentBooking.theatre_room}`}

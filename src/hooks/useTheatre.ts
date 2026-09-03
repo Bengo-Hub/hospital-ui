@@ -2,7 +2,14 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
-import { theatreApi, type CreateBookingInput } from '@/lib/api/theatre';
+import {
+  theatreApi,
+  type AdmitToPacuInput,
+  type AssignStaffInput,
+  type CreateBookingInput,
+  type DischargeFromPacuInput,
+  type OperativeNoteInput,
+} from '@/lib/api/theatre';
 
 function useOrgSlug(): string {
   const params = useParams();
@@ -86,5 +93,85 @@ export function useCancelBooking() {
   return useMutation({
     mutationFn: (bookingId: string) => theatreApi.cancelBooking(orgSlug, bookingId),
     onSettled: () => invalidateTheatre(qc, orgSlug),
+  });
+}
+
+// ── Surgical team assignment ─────────────────────────────────────────────────────────────────
+
+export function useStaffAssignments(bookingId?: string) {
+  const orgSlug = useOrgSlug();
+  return useQuery({
+    queryKey: ['hospital', 'theatre-staff', orgSlug, bookingId],
+    queryFn: () => theatreApi.listStaffAssignments(orgSlug, bookingId as string),
+    enabled: !!orgSlug && !!bookingId,
+  });
+}
+
+export function useAssignStaff() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bookingId, data }: { bookingId: string; data: AssignStaffInput }) => theatreApi.assignStaff(orgSlug, bookingId, data),
+    onSuccess: (_r, { bookingId }) => qc.invalidateQueries({ queryKey: ['hospital', 'theatre-staff', orgSlug, bookingId] }),
+  });
+}
+
+export function useRemoveStaffAssignment() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bookingId, assignmentId }: { bookingId: string; assignmentId: string }) =>
+      theatreApi.removeStaffAssignment(orgSlug, bookingId, assignmentId),
+    onSuccess: (_r, { bookingId }) => qc.invalidateQueries({ queryKey: ['hospital', 'theatre-staff', orgSlug, bookingId] }),
+  });
+}
+
+// ── PACU ─────────────────────────────────────────────────────────────────────────────────────
+
+export function usePacuStays(bookingId?: string) {
+  const orgSlug = useOrgSlug();
+  return useQuery({
+    queryKey: ['hospital', 'pacu-stays', orgSlug, bookingId],
+    queryFn: () => theatreApi.listPacuStays(orgSlug, bookingId as string),
+    enabled: !!orgSlug && !!bookingId,
+  });
+}
+
+export function useAdmitToPacu() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bookingId, data }: { bookingId: string; data: AdmitToPacuInput }) => theatreApi.admitToPacu(orgSlug, bookingId, data),
+    onSuccess: (_r, { bookingId }) => qc.invalidateQueries({ queryKey: ['hospital', 'pacu-stays', orgSlug, bookingId] }),
+  });
+}
+
+export function useDischargeFromPacu() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pacuStayId, data }: { pacuStayId: string; data: DischargeFromPacuInput }) =>
+      theatreApi.dischargeFromPacu(orgSlug, pacuStayId, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hospital', 'pacu-stays', orgSlug] }),
+  });
+}
+
+// ── Operative note ───────────────────────────────────────────────────────────────────────────
+
+export function useOperativeNote(bookingId?: string) {
+  const orgSlug = useOrgSlug();
+  return useQuery({
+    queryKey: ['hospital', 'operative-note', orgSlug, bookingId],
+    queryFn: () => theatreApi.getOperativeNote(orgSlug, bookingId as string),
+    enabled: !!orgSlug && !!bookingId,
+  });
+}
+
+export function useRecordOperativeNote() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bookingId, data }: { bookingId: string; data: OperativeNoteInput }) => theatreApi.recordOperativeNote(orgSlug, bookingId, data),
+    onSuccess: (_r, { bookingId }) => qc.invalidateQueries({ queryKey: ['hospital', 'operative-note', orgSlug, bookingId] }),
   });
 }
