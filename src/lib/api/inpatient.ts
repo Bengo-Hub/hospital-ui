@@ -137,6 +137,10 @@ export interface CreateBedInput {
   bed_number: string;
 }
 
+export interface RenameBedInput {
+  bed_number: string;
+}
+
 export interface AdmitInput {
   visit_id: string;
   bed_id: string;
@@ -190,6 +194,8 @@ export const inpatientApi = {
     apiClient.patch<Bed>(`${hospitalBase(orgSlug)}/beds/${bedId}/status`, { status }),
   setBedIsolationPrecaution: (orgSlug: string, bedId: string, isolationPrecaution: IsolationPrecaution) =>
     apiClient.patch<Bed>(`${hospitalBase(orgSlug)}/beds/${bedId}/isolation-precaution`, { isolation_precaution: isolationPrecaution }),
+  renameBed: (orgSlug: string, bedId: string, data: RenameBedInput) =>
+    apiClient.put<Bed>(`${hospitalBase(orgSlug)}/beds/${bedId}`, data),
 
   // Admissions
   admit: (orgSlug: string, data: AdmitInput) =>

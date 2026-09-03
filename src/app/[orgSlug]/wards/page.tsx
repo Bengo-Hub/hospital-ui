@@ -2,14 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Bed as BedIcon, Building2, CheckCircle2, Loader2, Plus, Sparkles, Stethoscope, User, Wrench, X } from 'lucide-react';
+import { Bed as BedIcon, Building2, Check, CheckCircle2, Loader2, Pencil, Plus, Sparkles, Stethoscope, User, Wrench, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, Button, Input } from '@/components/ui/base';
 import { PageHeader, EmptyState, Skeleton } from '@/components/ui/page';
 import { Can } from '@/components/auth/can';
 import { P } from '@/lib/rbac/permissions';
 import { apiErrorMessage } from '@/lib/api/error-message';
-import { useWards, useWardOccupancy, useCreateWard, useCreateBed, useSetBedStatus, useSetBedIsolationPrecaution } from '@/hooks/useInpatient';
+import { useWards, useWardOccupancy, useCreateWard, useCreateBed, useSetBedStatus, useSetBedIsolationPrecaution, useRenameBed } from '@/hooks/useInpatient';
 import { useSetBedEquipment } from '@/hooks/useAssets';
 import { EquipmentPickerModal } from '@/components/assets/equipment-picker-modal';
 import type { BedOccupancy, BedStatus, IsolationPrecaution, WardType } from '@/lib/api/inpatient';
@@ -46,7 +46,10 @@ function BedTile({ row }: { row: BedOccupancy }) {
   const setStatus = useSetBedStatus();
   const setIsolation = useSetBedIsolationPrecaution();
   const setEquipment = useSetBedEquipment();
+  const renameBed = useRenameBed();
   const [equipmentOpen, setEquipmentOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [bedNumberDraft, setBedNumberDraft] = useState(row.bed.bed_number);
   const equipmentCount = row.bed.equipment_asset_ids?.length ?? 0;
 
   const handleIsolationChange = async (value: IsolationPrecaution) => {
@@ -54,6 +57,25 @@ function BedTile({ row }: { row: BedOccupancy }) {
       await setIsolation.mutateAsync({ bedId: row.bed.id, isolationPrecaution: value });
     } catch (e) {
       toast.error(await apiErrorMessage(e, 'Failed to update isolation precaution'));
+    }
+  };
+
+  const handleRename = async () => {
+    const trimmed = bedNumberDraft.trim();
+    if (!trimmed) {
+      toast.error('Bed number is required');
+      return;
+    }
+    if (trimmed === row.bed.bed_number) {
+      setRenaming(false);
+      return;
+    }
+    try {
+      await renameBed.mutateAsync({ bedId: row.bed.id, data: { bed_number: trimmed } });
+      toast.success('Bed renamed');
+      setRenaming(false);
+    } catch (e) {
+      toast.error(await apiErrorMessage(e, 'Failed to rename bed'));
     }
   };
 
@@ -80,7 +102,7 @@ function BedTile({ row }: { row: BedOccupancy }) {
         className="w-full text-left hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70"
         title={row.bed.status === 'occupied' ? 'View admission' : 'Click to cycle housekeeping status'}
       >
-        <div className="flex items-center justify-between gap-2 pr-6">
+        <div className="flex items-center justify-between gap-2 pr-14">
           <span className="font-bold text-sm">{row.bed.bed_number}</span>
           <Icon className="h-4 w-4 shrink-0" />
         </div>
@@ -95,6 +117,39 @@ function BedTile({ row }: { row: BedOccupancy }) {
           <p className="text-xs mt-1 font-bold uppercase tracking-wide">⚠ {ISOLATION_LABELS[row.bed.isolation_precaution]}</p>
         )}
       </button>
+      {renaming && (
+        <div className="mt-2 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <input
+            autoFocus
+            value={bedNumberDraft}
+            onChange={(e) => setBedNumberDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleRename();
+              if (e.key === 'Escape') setRenaming(false);
+            }}
+            placeholder="Bed number"
+            className="flex-1 min-w-0 text-xs bg-black/5 dark:bg-white/5 border border-current/20 rounded-lg py-1 px-1.5 focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={handleRename}
+            disabled={renameBed.isPending}
+            className="h-6 w-6 shrink-0 rounded-lg flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/10"
+            title="Save"
+          >
+            {renameBed.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+          </button>
+          <button
+            type="button"
+            onClick={() => setRenaming(false)}
+            disabled={renameBed.isPending}
+            className="h-6 w-6 shrink-0 rounded-lg flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/10"
+            title="Cancel"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
       {row.bed.status === 'occupied' && (
         <Can permission={P.INPATIENT_CHANGE}>
           <select
@@ -114,19 +169,35 @@ function BedTile({ row }: { row: BedOccupancy }) {
           </select>
         </Can>
       )}
-      <Can permission={P.INPATIENT_MANAGE}>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setEquipmentOpen(true);
-          }}
-          className="absolute top-2 right-2 h-6 w-6 rounded-lg flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/10"
-          title="Linked equipment"
-        >
-          <Stethoscope className="h-3.5 w-3.5" />
-        </button>
-      </Can>
+      <div className="absolute top-2 right-2 flex items-center gap-1">
+        <Can permission={P.INPATIENT_MANAGE}>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setBedNumberDraft(row.bed.bed_number);
+              setRenaming(true);
+            }}
+            className="h-6 w-6 rounded-lg flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/10"
+            title="Rename bed"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+        </Can>
+        <Can permission={P.INPATIENT_MANAGE}>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setEquipmentOpen(true);
+            }}
+            className="h-6 w-6 rounded-lg flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/10"
+            title="Linked equipment"
+          >
+            <Stethoscope className="h-3.5 w-3.5" />
+          </button>
+        </Can>
+      </div>
       {equipmentOpen && (
         <EquipmentPickerModal
           title={`Bed ${row.bed.bed_number}`}

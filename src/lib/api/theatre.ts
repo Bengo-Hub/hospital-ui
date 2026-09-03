@@ -38,6 +38,19 @@ export interface CreateBookingInput {
   fee_amount?: number;
 }
 
+// Partial update — every field optional. Deliberately excludes fee_amount: the procedure fee is
+// already posted as a billing charge at booking-creation time, so editing it here would desync
+// from what the patient may already owe. Only succeeds while status is awaiting_payment/scheduled
+// (hospital-api re-runs the same room/staff overlap conflict checks booking-creation does).
+export interface UpdateBookingInput {
+  theatre_room?: string;
+  surgery_type?: string;
+  surgeon_id?: string;
+  clear_surgeon_id?: boolean;
+  scheduled_at?: string;
+  duration_minutes?: number;
+}
+
 export type TheatreStaffRole = 'surgeon' | 'assistant_surgeon' | 'anaesthetist' | 'scrub_nurse' | 'circulating_nurse' | 'other';
 
 export interface TheatreStaffAssignment {
@@ -114,6 +127,8 @@ export const theatreApi = {
       .then(unwrapList),
   getBooking: (orgSlug: string, bookingId: string) =>
     apiClient.get<TheatreBooking>(`${hospitalBase(orgSlug)}/theatre-bookings/${bookingId}`),
+  updateBooking: (orgSlug: string, bookingId: string, data: UpdateBookingInput) =>
+    apiClient.put<TheatreBooking>(`${hospitalBase(orgSlug)}/theatre-bookings/${bookingId}`, data),
   activateIfPaid: (orgSlug: string, bookingId: string) =>
     apiClient.post<TheatreBooking>(`${hospitalBase(orgSlug)}/theatre-bookings/${bookingId}/activate`),
   updateChecklist: (orgSlug: string, bookingId: string, checklist: Record<string, boolean>) =>

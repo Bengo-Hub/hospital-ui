@@ -9,6 +9,7 @@ import {
   type CreateBookingInput,
   type DischargeFromPacuInput,
   type OperativeNoteInput,
+  type UpdateBookingInput,
 } from '@/lib/api/theatre';
 
 function useOrgSlug(): string {
@@ -46,6 +47,15 @@ export function useCreateBooking() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateBookingInput) => theatreApi.createBooking(orgSlug, data),
+    onSettled: () => invalidateTheatre(qc, orgSlug),
+  });
+}
+
+export function useUpdateBooking() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bookingId, data }: { bookingId: string; data: UpdateBookingInput }) => theatreApi.updateBooking(orgSlug, bookingId, data),
     onSettled: () => invalidateTheatre(qc, orgSlug),
   });
 }

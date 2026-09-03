@@ -13,6 +13,7 @@ import {
   type IsolationPrecaution,
   type RecordVitalsChartInput,
   type RecordWardRoundInput,
+  type RenameBedInput,
   type TransferInput,
 } from '@/lib/api/inpatient';
 
@@ -83,6 +84,15 @@ export function useSetBedIsolationPrecaution() {
   return useMutation({
     mutationFn: ({ bedId, isolationPrecaution }: { bedId: string; isolationPrecaution: IsolationPrecaution }) =>
       inpatientApi.setBedIsolationPrecaution(orgSlug, bedId, isolationPrecaution),
+    onSuccess: () => invalidateInpatient(qc, orgSlug),
+  });
+}
+
+export function useRenameBed() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bedId, data }: { bedId: string; data: RenameBedInput }) => inpatientApi.renameBed(orgSlug, bedId, data),
     onSuccess: () => invalidateInpatient(qc, orgSlug),
   });
 }

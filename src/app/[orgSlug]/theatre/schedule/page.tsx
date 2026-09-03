@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Loader2,
+  Pencil,
   Play,
   Plus,
   Scissors,
@@ -32,6 +33,7 @@ import { EquipmentPickerModal } from '@/components/assets/equipment-picker-modal
 import {
   useTheatreSchedule,
   useCreateBooking,
+  useUpdateBooking,
   useActivateBooking,
   useUpdateChecklist,
   useStartSurgery,
@@ -243,6 +245,111 @@ function NewBookingModal({ onClose }: { onClose: () => void }) {
       {showRegisterPatient && (
         <RegisterPatientModal orgSlug={orgSlug} onClose={() => setShowRegisterPatient(false)} onRegistered={handlePatientRegistered} />
       )}
+    </div>
+  );
+}
+
+// Renders an RFC3339 timestamp as the local-time value a <input type="datetime-local"> expects
+// (no timezone, no seconds) — the inverse of NewBookingModal's `new Date(scheduledAt).toISOString()`,
+// which parses that same local-time string back via the browser's local timezone.
+function toDatetimeLocalValue(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function RescheduleModal({ booking, onClose }: { booking: TheatreBooking; onClose: () => void }) {
+  const updateBooking = useUpdateBooking();
+  const [room, setRoom] = useState(booking.theatre_room);
+  const [surgeryType, setSurgeryType] = useState(booking.surgery_type);
+  const [scheduledAt, setScheduledAt] = useState(toDatetimeLocalValue(booking.scheduled_at));
+  const [duration, setDuration] = useState(String(booking.duration_minutes));
+  // Plain text field, not a picker — mirrors TeamSection's staff_user_id input, since
+  // NewBookingModal doesn't actually surface a surgeon_id field of its own to mirror.
+  const [surgeonId, setSurgeonId] = useState(booking.surgeon_id ?? '');
+
+  const handleSubmit = async () => {
+    if (!room.trim() || !surgeryType.trim() || !scheduledAt) {
+      toast.error('Theatre room, surgery type and scheduled time are required');
+      return;
+    }
+    const trimmedSurgeonId = surgeonId.trim();
+    try {
+      await updateBooking.mutateAsync({
+        bookingId: booking.id,
+        data: {
+          theatre_room: room.trim(),
+          surgery_type: surgeryType.trim(),
+          scheduled_at: new Date(scheduledAt).toISOString(),
+          duration_minutes: Number(duration) || booking.duration_minutes,
+          // clear_surgeon_id removes the assignment entirely — only sent when the field was
+          // cleared and the booking actually had a surgeon assigned; leaving it untouched sends
+          // neither key, so a blank field on a booking with no surgeon is simply a no-op.
+          ...(trimmedSurgeonId ? { surgeon_id: trimmedSurgeonId } : booking.surgeon_id ? { clear_surgeon_id: true } : {}),
+        },
+      });
+      toast.success('Booking rescheduled');
+      onClose();
+    } catch (e) {
+      toast.error(await apiErrorMessage(e, 'Failed to reschedule booking'));
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-card rounded-2xl border border-border w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <h3 className="font-bold text-base">Reschedule Surgery</h3>
+          <button onClick={onClose} className="h-9 w-9 rounded-xl flex items-center justify-center hover:bg-accent">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="p-6 space-y-4 overflow-y-auto">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                Theatre Room <span className="text-destructive">*</span>
+              </label>
+              <Input value={room} onChange={(e) => setRoom(e.target.value)} placeholder="e.g. OT-1" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1 block">Duration (minutes)</label>
+              <Input type="number" min={15} step={15} value={duration} onChange={(e) => setDuration(e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+              Surgery Type <span className="text-destructive">*</span>
+            </label>
+            <Input value={surgeryType} onChange={(e) => setSurgeryType(e.target.value)} placeholder="e.g. Appendectomy" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+              Scheduled At <span className="text-destructive">*</span>
+            </label>
+            <input
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={(e) => setScheduledAt(e.target.value)}
+              className="w-full bg-background border border-border rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Surgeon ID (optional)</label>
+            <Input value={surgeonId} onChange={(e) => setSurgeonId(e.target.value)} placeholder="Surgeon user ID" />
+            <p className="text-xs text-muted-foreground mt-1">Clear this field to remove the surgeon assignment entirely.</p>
+          </div>
+        </div>
+        <div className="flex gap-3 px-6 pb-6 pt-2 border-t border-border shrink-0">
+          <Button variant="outline" className="flex-1" onClick={onClose} disabled={updateBooking.isPending}>
+            Cancel
+          </Button>
+          <Button className="flex-1 gap-2" onClick={handleSubmit} disabled={updateBooking.isPending}>
+            {updateBooking.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            Save Changes
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -543,6 +650,7 @@ export default function TheatreSchedulePage() {
   const [checklistBooking, setChecklistBooking] = useState<TheatreBooking | null>(null);
   const [detailsBooking, setDetailsBooking] = useState<TheatreBooking | null>(null);
   const [equipmentBooking, setEquipmentBooking] = useState<TheatreBooking | null>(null);
+  const [rescheduleBooking, setRescheduleBooking] = useState<TheatreBooking | null>(null);
   const [cancelTarget, setCancelTarget] = useState<TheatreBooking | null>(null);
 
   const activate = useActivateBooking();
@@ -704,6 +812,14 @@ export default function TheatreSchedulePage() {
                             </Can>
                           )}
                           {(b.status === 'scheduled' || b.status === 'awaiting_payment') && (
+                            <Can permission={P.THEATRE_CHANGE}>
+                              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setRescheduleBooking(b)}>
+                                <Pencil className="h-3.5 w-3.5" />
+                                Reschedule
+                              </Button>
+                            </Can>
+                          )}
+                          {(b.status === 'scheduled' || b.status === 'awaiting_payment') && (
                             <Can permission={P.THEATRE_MANAGE}>
                               <Button
                                 size="sm"
@@ -729,6 +845,7 @@ export default function TheatreSchedulePage() {
 
       {newOpen && <NewBookingModal onClose={() => setNewOpen(false)} />}
       {checklistBooking && <ChecklistModal booking={checklistBooking} onClose={() => setChecklistBooking(null)} />}
+      {rescheduleBooking && <RescheduleModal booking={rescheduleBooking} onClose={() => setRescheduleBooking(null)} />}
       {detailsBooking && <BookingDetailsModal booking={detailsBooking} onClose={() => setDetailsBooking(null)} />}
       {equipmentBooking && (
         <EquipmentPickerModal
