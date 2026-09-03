@@ -78,6 +78,16 @@ export function useSetUserStatus() {
   });
 }
 
+export function useUpdateProfessionalRegistration() {
+  const orgSlug = useOrgSlug();
+  const invalidateUsers = useInvalidateUsers();
+  return useMutation({
+    mutationFn: ({ userId, data }: { userId: string; data: { professional_registration_number?: string; professional_registration_body?: string } }) =>
+      usersApi.updateProfessionalRegistration(orgSlug, userId, data),
+    onSuccess: invalidateUsers,
+  });
+}
+
 export function useInviteMember() {
   const orgSlug = useOrgSlug();
   const invalidateUsers = useInvalidateUsers();

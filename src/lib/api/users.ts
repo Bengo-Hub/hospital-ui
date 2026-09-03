@@ -14,6 +14,8 @@ export interface HospitalUserRow {
   name: string;
   status: string;
   roles: string[];
+  professional_registration_number?: string;
+  professional_registration_body?: string;
   created_at: string;
 }
 
@@ -61,6 +63,15 @@ export const usersApi = {
 
   setStatus: (orgSlug: string, userId: string, status: string) =>
     apiClient.put(`${hospitalBase(orgSlug)}/users/${userId}/status`, { status }),
+
+  /** KMPDC/Nursing Council/Pharmacy and Poisons Board etc. registration for internal clinical
+   * staff — auto-threaded into a prescription they write once set (see identity.Service.
+   * UpdateUserProfile / PharmacyHandler.CreatePrescription). */
+  updateProfessionalRegistration: (orgSlug: string, userId: string, data: { professional_registration_number?: string; professional_registration_body?: string }) =>
+    apiClient.put<{ id: string; professional_registration_number?: string; professional_registration_body?: string }>(
+      `${hospitalBase(orgSlug)}/users/${userId}/professional-registration`,
+      data,
+    ),
 
   assignExtraRole: (orgSlug: string, userId: string, roleCode: string) =>
     apiClient.post(`${hospitalBase(orgSlug)}/users/${userId}/roles`, { role_code: roleCode }),

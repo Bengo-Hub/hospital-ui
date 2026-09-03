@@ -11,6 +11,7 @@ import { useAppPermissions } from '@/hooks/use-app-permissions';
 import { useHospitalUsers, useHospitalRoles, useHospitalOutlets, useSetUserRole, useSetUserStatus } from '@/hooks/useUsers';
 import { ExtraRolesCell } from '@/components/users/extra-roles-cell';
 import { OutletAssignmentCell } from '@/components/users/outlet-assignment-cell';
+import { ProfessionalRegistrationCell } from '@/components/users/professional-registration-cell';
 import { InviteMemberModal } from '@/components/users/invite-member-modal';
 import { apiErrorMessage } from '@/lib/api/error-message';
 import { P } from '@/lib/rbac/permissions';
@@ -147,6 +148,17 @@ export default function UsersPage() {
     {
       key: 'extra_roles', header: 'Extra roles',
       render: (u) => <ExtraRolesCell userId={u.id} primaryRole={(u.roles ?? [])[0] ?? ''} extraRoles={(u.roles ?? []).slice(1)} canManage={canManage} />,
+    },
+    {
+      key: 'professional_registration', header: 'Professional Registration',
+      render: (u) => (
+        <ProfessionalRegistrationCell
+          userId={u.id}
+          number={u.professional_registration_number}
+          body={u.professional_registration_body}
+          canManage={canManage}
+        />
+      ),
     },
     ...(outletOptions.length > 1
       ? [{
