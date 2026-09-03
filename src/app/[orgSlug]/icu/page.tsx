@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { Activity, AlertTriangle, CheckCircle2, Loader2, LogOut, Plus, ShieldAlert, Stethoscope, X } from 'lucide-react';
 import { Card, Button, Badge } from '@/components/ui/base';
@@ -10,6 +12,7 @@ import { Can } from '@/components/auth/can';
 import { P } from '@/lib/rbac/permissions';
 import { apiErrorMessage } from '@/lib/api/error-message';
 import { useAdmissions, useAdmission } from '@/hooks/useInpatient';
+import { CreatableSelect } from '@/components/ui/creatable-select';
 import { usePatient } from '@/hooks/useClinical';
 import { useICUEpisodes, useStartICUEpisode, useUpdateICUEpisode, useEndICUEpisode } from '@/hooks/useICU';
 import { useSetEpisodeEquipment } from '@/hooks/useAssets';
@@ -29,6 +32,8 @@ function PatientLabel({ admissionId }: { admissionId: string }) {
 }
 
 function StartEpisodeModal({ onClose }: { onClose: () => void }) {
+  const params = useParams();
+  const orgSlug = params?.orgSlug as string;
   const { data: admissions, isLoading } = useAdmissions('active');
   const startEpisode = useStartICUEpisode();
   const [admissionId, setAdmissionId] = useState('');
@@ -66,18 +71,21 @@ function StartEpisodeModal({ onClose }: { onClose: () => void }) {
             {isLoading ? (
               <Skeleton className="h-9 w-full" />
             ) : (
-              <select
+              <CreatableSelect
                 value={admissionId}
-                onChange={(e) => setAdmissionId(e.target.value)}
-                className="w-full bg-background border border-border rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-              >
-                <option value="">Select active admission…</option>
-                {(admissions ?? []).map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.admission_number}
-                  </option>
-                ))}
-              </select>
+                onChange={(id) => setAdmissionId(id)}
+                options={(admissions ?? []).map((a) => ({ id: a.id, name: a.admission_number }))}
+                placeholder="Select active admission…"
+              />
+            )}
+            {!isLoading && (admissions ?? []).length === 0 && (
+              <p className="text-[11px] text-muted-foreground mt-1">
+                No active admissions —{' '}
+                <Link href={`/${orgSlug}/admissions`} className="text-primary hover:underline">
+                  admit the patient first, from the Admissions page
+                </Link>
+                .
+              </p>
             )}
           </div>
           <div>

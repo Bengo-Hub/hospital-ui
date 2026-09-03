@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   CalendarClock,
@@ -23,7 +24,9 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Can } from '@/components/auth/can';
 import { P } from '@/lib/rbac/permissions';
 import { apiErrorMessage } from '@/lib/api/error-message';
-import { useVisits } from '@/hooks/useClinical';
+import { useVisits, usePatients, useCheckInVisit } from '@/hooks/useClinical';
+import { CreatableSelect } from '@/components/ui/creatable-select';
+import { RegisterPatientModal } from '@/components/clinical/register-patient-modal';
 import { useSetBookingEquipment } from '@/hooks/useAssets';
 import { EquipmentPickerModal } from '@/components/assets/equipment-picker-modal';
 import {
@@ -44,6 +47,7 @@ import {
   useRecordOperativeNote,
 } from '@/hooks/useTheatre';
 import type { PacuDisposition, TheatreBooking, TheatreBookingStatus, TheatreStaffRole } from '@/lib/api/theatre';
+import type { Patient } from '@/lib/api/clinical';
 
 const STATUS_BADGE: Record<TheatreBookingStatus, { variant: 'default' | 'success' | 'warning' | 'error' | 'outline'; label: string }> = {
   awaiting_payment: { variant: 'warning', label: 'Awaiting Payment' },
@@ -89,14 +93,35 @@ const CHECKLIST_PHASE_LABELS: Record<'sign_in' | 'time_out' | 'sign_out', string
 };
 
 function NewBookingModal({ onClose }: { onClose: () => void }) {
+  const params = useParams();
+  const orgSlug = params?.orgSlug as string;
+  const { data: patients, isLoading: patientsLoading } = usePatients();
   const { data: visits, isLoading: visitsLoading } = useVisits();
   const createBooking = useCreateBooking();
+  const checkInVisit = useCheckInVisit();
+  const [patientId, setPatientId] = useState('');
   const [visitId, setVisitId] = useState('');
+  const [showRegisterPatient, setShowRegisterPatient] = useState(false);
   const [room, setRoom] = useState('');
   const [surgeryType, setSurgeryType] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
   const [duration, setDuration] = useState('60');
   const [fee, setFee] = useState('');
+
+  const handlePatientRegistered = (p: Patient) => {
+    setShowRegisterPatient(false);
+    setPatientId(p.id);
+  };
+  const handleOpenVisit = async () => {
+    if (!patientId) return;
+    try {
+      const visit = await checkInVisit.mutateAsync({ patient_id: patientId });
+      setVisitId(visit.id);
+      toast.success(`Visit ${visit.visit_number} opened`);
+    } catch (e) {
+      toast.error(await apiErrorMessage(e, 'Failed to open visit'));
+    }
+  };
 
   const handleSubmit = async () => {
     if (!visitId || !room.trim() || !surgeryType.trim() || !scheduledAt) {
@@ -130,24 +155,39 @@ function NewBookingModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="p-6 space-y-4 overflow-y-auto">
           <div>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Registered Patient</label>
+            {patientsLoading ? (
+              <Skeleton className="h-9 w-full" />
+            ) : (
+              <CreatableSelect
+                value={patientId}
+                onChange={(id) => setPatientId(id)}
+                options={(patients ?? []).map((p) => ({ id: p.id, name: p.full_name, hint: p.mrn }))}
+                placeholder="Select patient…"
+                onAddClick={() => setShowRegisterPatient(true)}
+                addLabel="Register new patient…"
+              />
+            )}
+          </div>
+          <div>
             <label className="text-xs font-semibold text-muted-foreground mb-1 block">
               Visit <span className="text-destructive">*</span>
             </label>
             {visitsLoading ? (
               <Skeleton className="h-9 w-full" />
             ) : (
-              <select
+              <CreatableSelect
                 value={visitId}
-                onChange={(e) => setVisitId(e.target.value)}
-                className="w-full bg-background border border-border rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-              >
-                <option value="">Select visit…</option>
-                {(visits ?? []).map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.visit_number} — {v.chief_complaint || 'no chief complaint recorded'}
-                  </option>
-                ))}
-              </select>
+                onChange={(id) => setVisitId(id)}
+                options={(visits ?? []).map((v) => ({ id: v.id, name: `${v.visit_number} — ${v.chief_complaint || 'no chief complaint recorded'}` }))}
+                placeholder="Select visit…"
+                onAddClick={patientId ? handleOpenVisit : undefined}
+                addLabel={checkInVisit.isPending ? 'Opening visit…' : 'Open new visit for this patient'}
+                disabled={checkInVisit.isPending}
+              />
+            )}
+            {!patientId && (
+              <p className="text-[11px] text-muted-foreground mt-1">Select a registered patient above to open a new visit.</p>
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -200,6 +240,9 @@ function NewBookingModal({ onClose }: { onClose: () => void }) {
           </Button>
         </div>
       </div>
+      {showRegisterPatient && (
+        <RegisterPatientModal orgSlug={orgSlug} onClose={() => setShowRegisterPatient(false)} onRegistered={handlePatientRegistered} />
+      )}
     </div>
   );
 }

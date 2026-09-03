@@ -22,10 +22,13 @@ import {
   useEnterLabResult,
   useSubmitLabInsuranceClaim,
 } from '@/hooks/useLab';
-import { useVisits } from '@/hooks/useClinical';
+import { useVisits, usePatients, useCheckInVisit } from '@/hooks/useClinical';
+import { CreatableSelect } from '@/components/ui/creatable-select';
+import { RegisterPatientModal } from '@/components/clinical/register-patient-modal';
 import { InsuranceClaimModal } from '@/components/billing/insurance-claim-modal';
 import { VisitChargesPanel } from '@/components/billing/visit-charges-panel';
 import type { LabOrder, LabOrderStatus, ResultFlag } from '@/lib/api/lab';
+import type { Patient } from '@/lib/api/clinical';
 
 const STATUS_OPTIONS: { value: LabOrderStatus | ''; label: string }[] = [
   { value: '', label: 'All Statuses' },
@@ -58,14 +61,35 @@ const inputCls = 'w-full bg-background border border-border rounded-lg py-1.5 px
 // ─── New Order modal ────────────────────────────────────────────────────────
 
 function NewOrderModal({ onClose }: { onClose: () => void }) {
+  const params = useParams();
+  const orgSlug = params?.orgSlug as string;
+  const { data: patients, isLoading: patientsLoading } = usePatients();
   const { data: visits, isLoading: visitsLoading } = useVisits();
   const { data: catalog, isLoading: catalogLoading } = useLabTestCatalog();
   const createOrder = useCreateLabOrder();
+  const checkInVisit = useCheckInVisit();
 
+  const [patientId, setPatientId] = useState('');
   const [visitId, setVisitId] = useState('');
+  const [showRegisterPatient, setShowRegisterPatient] = useState(false);
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
   const [testSearch, setTestSearch] = useState('');
   const [notes, setNotes] = useState('');
+
+  const handlePatientRegistered = (p: Patient) => {
+    setShowRegisterPatient(false);
+    setPatientId(p.id);
+  };
+  const handleOpenVisit = async () => {
+    if (!patientId) return;
+    try {
+      const visit = await checkInVisit.mutateAsync({ patient_id: patientId });
+      setVisitId(visit.id);
+      toast.success(`Visit ${visit.visit_number} opened`);
+    } catch (e) {
+      toast.error(await apiErrorMessage(e, 'Failed to open visit'));
+    }
+  };
 
   const filteredCatalog = useMemo(() => {
     const rows = catalog ?? [];
@@ -125,24 +149,40 @@ function NewOrderModal({ onClose }: { onClose: () => void }) {
 
         <div className="p-6 space-y-4 overflow-y-auto">
           <div>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Registered Patient</label>
+            {patientsLoading ? (
+              <Skeleton className="h-9 w-full" />
+            ) : (
+              <CreatableSelect
+                value={patientId}
+                onChange={(id) => setPatientId(id)}
+                options={(patients ?? []).map((p) => ({ id: p.id, name: p.full_name, hint: p.mrn }))}
+                placeholder="Select patient…"
+                onAddClick={() => setShowRegisterPatient(true)}
+                addLabel="Register new patient…"
+              />
+            )}
+          </div>
+
+          <div>
             <label className="text-xs font-semibold text-muted-foreground mb-1 block">
               Visit <span className="text-destructive">*</span>
             </label>
             {visitsLoading ? (
               <Skeleton className="h-9 w-full" />
             ) : (
-              <select
+              <CreatableSelect
                 value={visitId}
-                onChange={(e) => setVisitId(e.target.value)}
-                className="w-full bg-background border border-border rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-              >
-                <option value="">Select visit…</option>
-                {(visits ?? []).map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.visit_number} — {v.status.replace('_', ' ')}
-                  </option>
-                ))}
-              </select>
+                onChange={(id) => setVisitId(id)}
+                options={(visits ?? []).map((v) => ({ id: v.id, name: `${v.visit_number} — ${v.status.replace('_', ' ')}` }))}
+                placeholder="Select visit…"
+                onAddClick={patientId ? handleOpenVisit : undefined}
+                addLabel={checkInVisit.isPending ? 'Opening visit…' : 'Open new visit for this patient'}
+                disabled={checkInVisit.isPending}
+              />
+            )}
+            {!patientId && (
+              <p className="text-[11px] text-muted-foreground mt-1">Select a registered patient above to open a new visit.</p>
             )}
           </div>
 
@@ -209,6 +249,9 @@ function NewOrderModal({ onClose }: { onClose: () => void }) {
           </Button>
         </div>
       </div>
+      {showRegisterPatient && (
+        <RegisterPatientModal orgSlug={orgSlug} onClose={() => setShowRegisterPatient(false)} onRegistered={handlePatientRegistered} />
+      )}
     </div>
   );
 }

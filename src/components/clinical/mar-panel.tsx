@@ -7,12 +7,15 @@
 // pre-populated slot"). mvp-gap-backlog-2026-09-02.md Sprint 4 item 1.
 
 import { useMemo, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { Loader2, Pill, Plus, X } from 'lucide-react';
 import { Card, Button, Badge } from '@/components/ui/base';
 import { Can } from '@/components/auth/can';
 import { apiErrorMessage } from '@/lib/api/error-message';
 import { useMedicationAdministrations, useActivePrescriptionsForMar, useChartDose } from '@/hooks/useMar';
+import { useAdmission } from '@/hooks/useInpatient';
+import { NewPrescriptionModal } from '@/components/pharmacy/new-prescription-modal';
 import type { MarStatus, ChartDoseInput } from '@/lib/api/mar';
 
 const STATUS_BADGE: Record<MarStatus, { variant: 'default' | 'success' | 'warning' | 'error' | 'outline'; label: string }> = {
@@ -33,11 +36,15 @@ const STATUS_OPTIONS: { value: ChartDoseInput['status']; label: string }[] = [
 const inputCls = 'w-full bg-background border border-border rounded-lg py-1.5 px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40';
 
 function ChartDoseForm({ admissionId, onClose }: { admissionId: string; onClose: () => void }) {
+  const params = useParams();
+  const orgSlug = params?.orgSlug as string;
+  const { data: admission } = useAdmission(admissionId);
   const { data: prescriptions, isLoading } = useActivePrescriptionsForMar(admissionId);
   const chartDose = useChartDose();
   const [lineId, setLineId] = useState('');
   const [status, setStatus] = useState<ChartDoseInput['status']>('given');
   const [notes, setNotes] = useState('');
+  const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
 
   const lineOptions = useMemo(
     () =>
@@ -68,7 +75,13 @@ function ChartDoseForm({ admissionId, onClose }: { admissionId: string; onClose:
         {isLoading ? (
           <p className="text-xs text-muted-foreground">Loading…</p>
         ) : lineOptions.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No active prescriptions for this admission's visit.</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">No active prescriptions for this admission's visit.</p>
+            <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => setShowPrescriptionModal(true)}>
+              <Plus className="h-3.5 w-3.5" />
+              Write a prescription
+            </Button>
+          </div>
         ) : (
           <select value={lineId} onChange={(e) => setLineId(e.target.value)} className={inputCls}>
             <option value="">Select…</option>
@@ -94,6 +107,14 @@ function ChartDoseForm({ admissionId, onClose }: { admissionId: string; onClose:
           Chart Dose
         </Button>
       </div>
+      {showPrescriptionModal && admission && (
+        <NewPrescriptionModal
+          orgSlug={orgSlug}
+          initialPatientId={admission.patient_id}
+          initialVisitId={admission.patient_visit_id}
+          onClose={() => setShowPrescriptionModal(false)}
+        />
+      )}
     </div>
   );
 }

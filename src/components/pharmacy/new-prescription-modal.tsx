@@ -41,18 +41,25 @@ export function NewPrescriptionModal({
   orgSlug,
   title = 'New Prescription',
   onClose,
+  initialPatientId,
+  initialVisitId,
 }: {
   orgSlug: string;
   title?: string;
   onClose: () => void;
+  /** Pre-scopes the form to an already-known patient/visit (e.g. opened from the MAR panel for a
+   * specific admission) so the clinician isn't forced to re-pick what's already known. Omit for
+   * the normal standalone flow — every existing caller passes neither and is unaffected. */
+  initialPatientId?: string;
+  initialVisitId?: string;
 }) {
   const createPrescription = useCreatePrescription();
   const { data: patients, isLoading: patientsLoading } = usePatients();
   const { data: visits, isLoading: visitsLoading } = useVisits();
   const checkInVisit = useCheckInVisit();
 
-  const [patientId, setPatientId] = useState('');
-  const [visitId, setVisitId] = useState('');
+  const [patientId, setPatientId] = useState(initialPatientId ?? '');
+  const [visitId, setVisitId] = useState(initialVisitId ?? '');
   const [showRegisterPatient, setShowRegisterPatient] = useState(false);
   const [walkInName, setWalkInName] = useState('');
   const [patientIdNumber, setPatientIdNumber] = useState('');
