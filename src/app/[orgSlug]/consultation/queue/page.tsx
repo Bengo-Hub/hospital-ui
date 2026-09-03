@@ -65,7 +65,7 @@ function SystemsGrid({
   onChange: (system: string, value: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
       {EXAM_SYSTEMS.map((sys) => (
         <div key={sys.key}>
           <label className="text-[11px] font-medium text-muted-foreground mb-0.5 block">{sys.label}</label>
@@ -169,7 +169,7 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-card rounded-2xl border border-border w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-card rounded-2xl border border-border w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card">
           <div>
             <h3 className="font-bold text-base">Consultation</h3>
@@ -259,17 +259,19 @@ function ExaminationModal({ visit, onClose }: { visit: PatientVisit; onClose: ()
         ) : (
           <>
             <div className="p-6 space-y-3">
-              <div>
-                <label className={labelCls}>Queue</label>
-                <select value={queueType} onChange={(e) => setQueueType(e.target.value as QueueType)} className={inputCls}>
-                  {QUEUE_TYPES.map((q) => (
-                    <option key={q.value} value={q.value}>{q.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className={labelCls}>Chief Complaint</label>
-                <input value={chiefComplaint} onChange={(e) => setChiefComplaint(e.target.value)} className={inputCls} />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Queue</label>
+                  <select value={queueType} onChange={(e) => setQueueType(e.target.value as QueueType)} className={inputCls}>
+                    {QUEUE_TYPES.map((q) => (
+                      <option key={q.value} value={q.value}>{q.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Chief Complaint</label>
+                  <input value={chiefComplaint} onChange={(e) => setChiefComplaint(e.target.value)} className={inputCls} />
+                </div>
               </div>
               <div>
                 <label className={labelCls}>Review of Systems</label>

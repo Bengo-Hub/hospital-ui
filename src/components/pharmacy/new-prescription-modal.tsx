@@ -6,12 +6,15 @@ import { toast } from 'sonner';
 import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
 import { Button, Input } from '@/components/ui/base';
 import { Skeleton } from '@/components/ui/page';
+import { CreatableSelect } from '@/components/ui/creatable-select';
+import { RegisterPatientModal } from '@/components/clinical/register-patient-modal';
 import { apiErrorMessage } from '@/lib/api/error-message';
 import { useCreatePrescription } from '@/hooks/usePharmacy';
-import { usePatients, useVisits } from '@/hooks/useClinical';
+import { usePatients, useVisits, useCheckInVisit } from '@/hooks/useClinical';
 import { pharmacyApi } from '@/lib/api/pharmacy';
 import { drugToOption } from '@/components/pharmacy/drug-option';
 import type { CreatePrescriptionInput, DrugSearchItem, PrescriptionLineInput } from '@/lib/api/pharmacy';
+import type { Patient } from '@/lib/api/clinical';
 
 const inputCls = 'w-full bg-background border border-border rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40';
 const labelCls = 'text-xs font-semibold text-muted-foreground mb-1 block';
@@ -46,9 +49,11 @@ export function NewPrescriptionModal({
   const createPrescription = useCreatePrescription();
   const { data: patients, isLoading: patientsLoading } = usePatients();
   const { data: visits, isLoading: visitsLoading } = useVisits();
+  const checkInVisit = useCheckInVisit();
 
   const [patientId, setPatientId] = useState('');
   const [visitId, setVisitId] = useState('');
+  const [showRegisterPatient, setShowRegisterPatient] = useState(false);
   const [walkInName, setWalkInName] = useState('');
   const [patientIdNumber, setPatientIdNumber] = useState('');
   const [externalFacilityName, setExternalFacilityName] = useState('');
@@ -65,6 +70,20 @@ export function NewPrescriptionModal({
   };
   const addLine = () => setLines((prev) => [...prev, emptyLine()]);
   const removeLine = (idx: number) => setLines((prev) => prev.filter((_, i) => i !== idx));
+  const handlePatientRegistered = (p: Patient) => {
+    setShowRegisterPatient(false);
+    setPatientId(p.id);
+  };
+  const handleOpenVisit = async () => {
+    if (!patientId) return;
+    try {
+      const visit = await checkInVisit.mutateAsync({ patient_id: patientId });
+      setVisitId(visit.id);
+      toast.success(`Visit ${visit.visit_number} opened`);
+    } catch (e) {
+      toast.error(await apiErrorMessage(e, 'Failed to open visit'));
+    }
+  };
   const searchDrugs = async (q: string): Promise<ComboboxOption[]> => {
     const items = await pharmacyApi.searchDrugs(orgSlug, q);
     items.forEach((item) => drugCacheRef.current.set(item.sku, item));
@@ -172,18 +191,14 @@ export function NewPrescriptionModal({
                 {patientsLoading ? (
                   <Skeleton className="h-9 w-full" />
                 ) : (
-                  <select
+                  <CreatableSelect
                     value={patientId}
-                    onChange={(e) => setPatientId(e.target.value)}
-                    className={inputCls}
-                  >
-                    <option value="">— Walk-in (no patient record) —</option>
-                    {(patients ?? []).map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.full_name} · {p.mrn}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(id) => setPatientId(id)}
+                    options={(patients ?? []).map((p) => ({ id: p.id, name: p.full_name, hint: p.mrn }))}
+                    placeholder="— Walk-in (no patient record) —"
+                    onAddClick={() => setShowRegisterPatient(true)}
+                    addLabel="Register new patient…"
+                  />
                 )}
               </div>
               <div>
@@ -191,14 +206,18 @@ export function NewPrescriptionModal({
                 {visitsLoading ? (
                   <Skeleton className="h-9 w-full" />
                 ) : (
-                  <select value={visitId} onChange={(e) => setVisitId(e.target.value)} className={inputCls}>
-                    <option value="">— None —</option>
-                    {(visits ?? []).map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.visit_number} — {v.status.replace('_', ' ')}
-                      </option>
-                    ))}
-                  </select>
+                  <CreatableSelect
+                    value={visitId}
+                    onChange={(id) => setVisitId(id)}
+                    options={(visits ?? []).map((v) => ({ id: v.id, name: `${v.visit_number} — ${v.status.replace('_', ' ')}` }))}
+                    placeholder="— None —"
+                    onAddClick={patientId ? handleOpenVisit : undefined}
+                    addLabel={checkInVisit.isPending ? 'Opening visit…' : 'Open new visit for this patient'}
+                    disabled={checkInVisit.isPending}
+                  />
+                )}
+                {!patientId && (
+                  <p className="text-[11px] text-muted-foreground mt-1">Select a registered patient above to open a new visit.</p>
                 )}
               </div>
               {!patientId && (
@@ -331,6 +350,9 @@ export function NewPrescriptionModal({
           </Button>
         </div>
       </div>
+      {showRegisterPatient && (
+        <RegisterPatientModal orgSlug={orgSlug} onClose={() => setShowRegisterPatient(false)} onRegistered={handlePatientRegistered} />
+      )}
     </div>
   );
 }

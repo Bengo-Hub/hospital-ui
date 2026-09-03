@@ -462,7 +462,7 @@ function OperativeNoteSection({ bookingId }: { bookingId: string }) {
 function BookingDetailsModal({ booking, onClose }: { booking: TheatreBooking; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-card rounded-2xl border border-border w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh]">
+      <div className="bg-card rounded-2xl border border-border w-full max-w-3xl shadow-2xl flex flex-col max-h-[85vh]">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <h3 className="font-bold text-base">{booking.surgery_type} — {booking.theatre_room}</h3>
           <button onClick={onClose} className="h-9 w-9 rounded-xl flex items-center justify-center hover:bg-accent">
@@ -470,13 +470,15 @@ function BookingDetailsModal({ booking, onClose }: { booking: TheatreBooking; on
           </button>
         </div>
         <div className="p-6 space-y-5 overflow-y-auto">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Surgical Team</p>
-            <TeamSection bookingId={booking.id} />
-          </div>
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">PACU (Recovery)</p>
-            <PacuSection bookingId={booking.id} />
+          <div className="grid md:grid-cols-2 gap-5">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Surgical Team</p>
+              <TeamSection bookingId={booking.id} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">PACU (Recovery)</p>
+              <PacuSection bookingId={booking.id} />
+            </div>
           </div>
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Operative Note</p>

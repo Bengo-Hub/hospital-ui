@@ -1,9 +1,11 @@
 # Hospital UI — UX/UI Design Guidance
 
-**Last updated:** 2026-07-31 — informed by the `ui-ux-pro-max` skill's design-intelligence guidance
-(Quick Reference tables: Accessibility, Touch & Interaction, Style Selection, Layout & Responsive,
-Typography & Color, Forms & Feedback, Navigation, Charts & Data), applied to a clinical/healthcare
-SaaS product. This doc sets the direction; it is not a component library.
+**Last updated:** 2026-09-03 — added the Modal / Dialog Sizing section after a recurring
+narrow-modal-with-cramped-content defect was flagged. Originally informed by the `ui-ux-pro-max`
+skill's design-intelligence guidance (Quick Reference tables: Accessibility, Touch & Interaction,
+Style Selection, Layout & Responsive, Typography & Color, Forms & Feedback, Navigation, Charts &
+Data), applied to a clinical/healthcare SaaS product. This doc sets the direction; it is not a
+component library.
 
 ## Style Direction
 
@@ -63,6 +65,37 @@ decoration — directly following the skill's `color-not-decorative-only` rule.
 - Stat tiles (patients today, beds occupied, pending lab results, today's revenue — the Sprint-0
   placeholder dashboard already has these slots) use the shared `StatCard` component pattern already
   established in `treasury-ui`/`pos-ui`, not a new bespoke component.
+
+## Modal / Dialog Sizing
+
+**Size the container to the content, not the other way around.** This app has no shared
+`<Modal>`/`<Dialog>` wrapper — every modal is hand-rolled per page with its own `max-w-*`, chosen
+once when the modal was first built and then left alone as fields were added later. That drift is
+a recurring, previously-flagged defect (2026-09-03): a modal that started as a 3-field confirm and
+later grew a multi-section documentation form (structured grids, several sub-sections, more
+inputs) kept its original narrow width, leaving the fields visually cramped and squeezed into one
+thin column while the backdrop around the modal sits mostly empty. Anyone adding a field or a
+section to an existing modal must re-check its `max-w-*` against what it now contains, not just
+append the new field inside the old box.
+
+- **Pick width by content shape, re-checked whenever a modal's field count changes meaningfully:**
+  - Confirm/single-field dialogs → `max-w-sm` / `max-w-md`.
+  - A standard sequential form (a handful of fields, one clear next-field path) → `max-w-lg` /
+    `max-w-xl`.
+  - A structured multi-section or multi-grid documentation form (e.g. a form with 2+ named
+    sub-sections, or any grid of per-item inputs) → `max-w-2xl` / `max-w-3xl`, whatever the grid(s)
+    need to stop wrapping into a single cramped column.
+- The Layout Patterns section's "favor single-column forms" rule above is about a *time-pressured,
+  rapid sequential-entry* screen (triage vitals, a queue action) — it is not a mandate to keep
+  every modal at a fixed narrow width forever. A structured checklist/grid sub-component being
+  filled in by someone consulting a chart (review-of-systems, a WHO-checklist phase, a team-role
+  picker) is scanned, not rushed field-by-field, and may use a responsive multi-column grid
+  (`grid-cols-2`, scaling to `lg:grid-cols-3` on a wide-enough modal) — don't force it into one
+  column just because the primary-entry rule says single-column elsewhere.
+- Within a widened modal, pair genuinely-parallel short fields into a `grid-cols-2` row (e.g. two
+  independent named sections that don't depend on each other's state, like a booking's team-roster
+  next to its recovery/PACU tracker) rather than leaving them stacked full-width purely out of
+  habit — that's the other half of "balance the form" the width bump is meant to enable.
 
 ## Accessibility (non-negotiable per the skill's CRITICAL-priority rules)
 
