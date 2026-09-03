@@ -14,7 +14,14 @@ import { useAdmissions, useAdmit, useWards } from '@/hooks/useInpatient';
 import { useVisits, usePatient } from '@/hooks/useClinical';
 import { useBillableItemCatalog } from '@/hooks/useBilling';
 import { inpatientApi } from '@/lib/api/inpatient';
-import type { AdmissionStatus } from '@/lib/api/inpatient';
+import type { AdmissionStatus, IsolationPrecaution } from '@/lib/api/inpatient';
+
+const ISOLATION_OPTIONS: { value: IsolationPrecaution; label: string }[] = [
+  { value: 'none', label: 'None' },
+  { value: 'contact', label: 'Contact' },
+  { value: 'droplet', label: 'Droplet' },
+  { value: 'airborne', label: 'Airborne' },
+];
 
 const STATUS_OPTIONS: { value: AdmissionStatus | ''; label: string }[] = [
   { value: 'active', label: 'Active' },
@@ -39,6 +46,7 @@ function AdmitModal({ onClose }: { onClose: () => void }) {
   const [bedId, setBedId] = useState('');
   const [insured, setInsured] = useState(false);
   const [guaranteeReference, setGuaranteeReference] = useState('');
+  const [isolationPrecaution, setIsolationPrecaution] = useState<IsolationPrecaution>('none');
 
   const depositItem = useMemo(() => (catalog ?? []).find((c) => c.code === 'ADMISSION_DEPOSIT' && c.is_active), [catalog]);
 
@@ -77,6 +85,7 @@ function AdmitModal({ onClose }: { onClose: () => void }) {
         visit_id: visitId,
         bed_id: bedId,
         insurance_guarantee_reference: insured ? guaranteeReference.trim() : undefined,
+        isolation_precaution: isolationPrecaution !== 'none' ? isolationPrecaution : undefined,
       });
       toast.success('Patient admitted');
       onClose();
@@ -156,6 +165,19 @@ function AdmitModal({ onClose }: { onClose: () => void }) {
                 )}
               </div>
             )}
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Isolation Precaution</label>
+            <select
+              value={isolationPrecaution}
+              onChange={(e) => setIsolationPrecaution(e.target.value as IsolationPrecaution)}
+              className="w-full bg-background border border-border rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            >
+              {ISOLATION_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
           </div>
 
           <div className="rounded-xl border border-border p-3 space-y-2.5">

@@ -8,12 +8,16 @@ import type { PatientAccount } from './billing';
 export type BedStatus = 'available' | 'occupied' | 'cleaning' | 'out_of_service';
 export type AdmissionStatus = 'active' | 'discharged';
 export type TransferType = 'intra_facility' | 'inter_facility';
+export type WardType = 'general' | 'private' | 'semi_private' | 'isolation' | 'icu';
+export type IsolationPrecaution = 'contact' | 'droplet' | 'airborne' | 'none';
+export type ConditionAtDischarge = 'recovered' | 'improved' | 'unchanged' | 'deteriorated' | 'deceased';
 
 export interface Ward {
   id: string;
   tenant_id: string;
   outlet_id: string;
   name: string;
+  ward_type?: WardType;
   capacity: number;
   billable_item_code?: string;
   is_active: boolean;
@@ -26,6 +30,7 @@ export interface Bed {
   ward_id: string;
   bed_number: string;
   status: BedStatus;
+  isolation_precaution: IsolationPrecaution;
   /** inventory-api Asset IDs linked to this bed (e.g. a bed-mounted monitor) — reference only. */
   equipment_asset_ids?: string[];
   created_at: string;
@@ -46,8 +51,72 @@ export interface Admission {
   discharged_at?: string;
   discharged_by?: string;
   discharge_summary?: string;
+  discharge_diagnosis?: string;
+  procedures_performed?: string;
+  discharge_medications?: string;
+  follow_up_instructions?: string;
+  condition_at_discharge?: ConditionAtDischarge;
   insurance_guarantee_reference?: string;
   ward_charge_posted: boolean;
+}
+
+export interface VitalsChartEntry {
+  id: string;
+  tenant_id: string;
+  admission_id: string;
+  recorded_by: string;
+  bp_systolic?: number;
+  bp_diastolic?: number;
+  temperature_celsius?: number;
+  pulse_bpm?: number;
+  respiration_rate?: number;
+  spo2_percent?: number;
+  pain_score?: number;
+  notes?: string;
+  recorded_at: string;
+}
+
+export interface RecordVitalsChartInput {
+  bp_systolic?: number;
+  bp_diastolic?: number;
+  temperature_celsius?: number;
+  pulse_bpm?: number;
+  respiration_rate?: number;
+  spo2_percent?: number;
+  pain_score?: number;
+  notes?: string;
+}
+
+export interface WardRoundNote {
+  id: string;
+  tenant_id: string;
+  admission_id: string;
+  clinician_id: string;
+  notes: string;
+  diagnosis_code?: string;
+  diagnosis_name?: string;
+  recorded_at: string;
+}
+
+export interface RecordWardRoundInput {
+  notes: string;
+  diagnosis_code?: string;
+  diagnosis_name?: string;
+}
+
+export interface PatientTransfer {
+  id: string;
+  tenant_id: string;
+  admission_id: string;
+  transfer_type: TransferType;
+  from_ward_id: string;
+  from_bed_id: string;
+  to_ward_id?: string;
+  to_bed_id?: string;
+  receiving_facility_name?: string;
+  reason?: string;
+  transferred_by?: string;
+  transferred_at: string;
 }
 
 export interface BedOccupancy {
@@ -59,6 +128,7 @@ export interface BedOccupancy {
 
 export interface CreateWardInput {
   name: string;
+  ward_type?: WardType;
   capacity?: number;
   billable_item_code?: string;
 }
@@ -71,6 +141,7 @@ export interface AdmitInput {
   visit_id: string;
   bed_id: string;
   insurance_guarantee_reference?: string;
+  isolation_precaution?: IsolationPrecaution;
 }
 
 export interface TransferInput {
@@ -87,6 +158,11 @@ export interface TransferInput {
 export interface DischargeInput {
   summary?: string;
   override_reason?: string;
+  discharge_diagnosis?: string;
+  procedures_performed?: string;
+  discharge_medications?: string;
+  follow_up_instructions?: string;
+  condition_at_discharge?: ConditionAtDischarge;
 }
 
 /** Shape of the 409 body Transfer/Discharge return while a balance is outstanding — matches
@@ -112,6 +188,8 @@ export const inpatientApi = {
     apiClient.get<{ data: Bed[] }>(`${hospitalBase(orgSlug)}/wards/${wardId}/beds`).then(unwrapList),
   setBedStatus: (orgSlug: string, bedId: string, status: BedStatus) =>
     apiClient.patch<Bed>(`${hospitalBase(orgSlug)}/beds/${bedId}/status`, { status }),
+  setBedIsolationPrecaution: (orgSlug: string, bedId: string, isolationPrecaution: IsolationPrecaution) =>
+    apiClient.patch<Bed>(`${hospitalBase(orgSlug)}/beds/${bedId}/isolation-precaution`, { isolation_precaution: isolationPrecaution }),
 
   // Admissions
   admit: (orgSlug: string, data: AdmitInput) =>
@@ -127,9 +205,21 @@ export const inpatientApi = {
       `${hospitalBase(orgSlug)}/admissions/${admissionId}/transfer`,
       data,
     ),
+  listTransfers: (orgSlug: string, admissionId: string) =>
+    apiClient.get<{ data: PatientTransfer[] }>(`${hospitalBase(orgSlug)}/admissions/${admissionId}/transfers`).then(unwrapList),
   discharge: (orgSlug: string, admissionId: string, data: DischargeInput) =>
     apiClient.post<{ admission: Admission; account?: PatientAccount }>(
       `${hospitalBase(orgSlug)}/admissions/${admissionId}/discharge`,
       data,
     ),
+
+  // Nursing vitals chart / doctor's ward rounds
+  recordVitalsChart: (orgSlug: string, admissionId: string, data: RecordVitalsChartInput) =>
+    apiClient.post<VitalsChartEntry>(`${hospitalBase(orgSlug)}/admissions/${admissionId}/vitals-chart`, data),
+  listVitalsChart: (orgSlug: string, admissionId: string) =>
+    apiClient.get<{ data: VitalsChartEntry[] }>(`${hospitalBase(orgSlug)}/admissions/${admissionId}/vitals-chart`).then(unwrapList),
+  recordWardRound: (orgSlug: string, admissionId: string, data: RecordWardRoundInput) =>
+    apiClient.post<WardRoundNote>(`${hospitalBase(orgSlug)}/admissions/${admissionId}/ward-rounds`, data),
+  listWardRounds: (orgSlug: string, admissionId: string) =>
+    apiClient.get<{ data: WardRoundNote[] }>(`${hospitalBase(orgSlug)}/admissions/${admissionId}/ward-rounds`).then(unwrapList),
 };

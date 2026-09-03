@@ -64,9 +64,13 @@ a modal on `/laboratory`, not a `/laboratory/new` route), not a scope reduction.
 ## Gap audit — UI implications (2026-09-02, later the same day)
 
 `hospital-api/docs/sprints/sprint-6-inpatient.md` gained a matching "Gap audit and Sprint 6.1
-candidates" section after a client review flagged missing IPD sub-modules. **Everything below is a
-UI-side implication of that backend proposal — none of it is built, and it depends on the
-corresponding backend fields shipping first.**
+candidates" section after a client review flagged missing IPD sub-modules.
+
+**Shipped 2026-09-03**: every item below is live — the ward-type picker with `billable_item_code`
+suggestion (`NewWardModal`), a bed-tile isolation-precaution select (text + ⚠ icon, not color
+alone, per this doc's own rule), the structured discharge-summary form fields on the Discharge
+modal, and a nursing-vitals/ward-round section pair (`VitalsChartPanel`/`WardRoundsPanel`) plus a
+new `TransferHistoryPanel` on the admission detail page.
 
 - **Ward/bed-type picker.** Once `ward.ward_type` exists, the "New Ward" form gains a type select
   (General/Private/Semi-Private/Isolation/ICU) that suggests a default `billable_item_code`, still

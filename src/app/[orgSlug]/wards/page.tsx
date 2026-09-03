@@ -9,10 +9,26 @@ import { PageHeader, EmptyState, Skeleton } from '@/components/ui/page';
 import { Can } from '@/components/auth/can';
 import { P } from '@/lib/rbac/permissions';
 import { apiErrorMessage } from '@/lib/api/error-message';
-import { useWards, useWardOccupancy, useCreateWard, useCreateBed, useSetBedStatus } from '@/hooks/useInpatient';
+import { useWards, useWardOccupancy, useCreateWard, useCreateBed, useSetBedStatus, useSetBedIsolationPrecaution } from '@/hooks/useInpatient';
 import { useSetBedEquipment } from '@/hooks/useAssets';
 import { EquipmentPickerModal } from '@/components/assets/equipment-picker-modal';
-import type { BedOccupancy, BedStatus } from '@/lib/api/inpatient';
+import type { BedOccupancy, BedStatus, IsolationPrecaution, WardType } from '@/lib/api/inpatient';
+
+const ISOLATION_LABELS: Record<IsolationPrecaution, string> = {
+  none: 'None',
+  contact: 'Contact',
+  droplet: 'Droplet',
+  airborne: 'Airborne',
+};
+
+const WARD_TYPE_OPTIONS: { value: WardType | ''; label: string; suggestedCode: string }[] = [
+  { value: '', label: '— (unclassified)', suggestedCode: '' },
+  { value: 'general', label: 'General', suggestedCode: 'BED_DAY_GENERAL' },
+  { value: 'private', label: 'Private', suggestedCode: 'BED_DAY_PRIVATE' },
+  { value: 'semi_private', label: 'Semi-Private', suggestedCode: 'BED_DAY_SEMI_PRIVATE' },
+  { value: 'isolation', label: 'Isolation', suggestedCode: 'BED_DAY_ISOLATION' },
+  { value: 'icu', label: 'ICU', suggestedCode: 'BED_DAY_ICU' },
+];
 
 const BED_STATUS_CONFIG: Record<BedStatus, { label: string; icon: typeof CheckCircle2; cls: string }> = {
   available: { label: 'Available', icon: CheckCircle2, cls: 'border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-400' },
@@ -28,9 +44,18 @@ function BedTile({ row }: { row: BedOccupancy }) {
   const cfg = BED_STATUS_CONFIG[row.bed.status];
   const Icon = cfg.icon;
   const setStatus = useSetBedStatus();
+  const setIsolation = useSetBedIsolationPrecaution();
   const setEquipment = useSetBedEquipment();
   const [equipmentOpen, setEquipmentOpen] = useState(false);
   const equipmentCount = row.bed.equipment_asset_ids?.length ?? 0;
+
+  const handleIsolationChange = async (value: IsolationPrecaution) => {
+    try {
+      await setIsolation.mutateAsync({ bedId: row.bed.id, isolationPrecaution: value });
+    } catch (e) {
+      toast.error(await apiErrorMessage(e, 'Failed to update isolation precaution'));
+    }
+  };
 
   const handleCycle = async () => {
     // Housekeeping cycle only — occupied beds are never touched here (Admit/Discharge own that).
@@ -66,7 +91,29 @@ function BedTile({ row }: { row: BedOccupancy }) {
           </p>
         )}
         {equipmentCount > 0 && <p className="text-xs mt-1 opacity-75">{equipmentCount} equipment linked</p>}
+        {row.bed.isolation_precaution !== 'none' && (
+          <p className="text-xs mt-1 font-bold uppercase tracking-wide">⚠ {ISOLATION_LABELS[row.bed.isolation_precaution]}</p>
+        )}
       </button>
+      {row.bed.status === 'occupied' && (
+        <Can permission={P.INPATIENT_CHANGE}>
+          <select
+            value={row.bed.isolation_precaution}
+            onChange={(e) => {
+              e.stopPropagation();
+              handleIsolationChange(e.target.value as IsolationPrecaution);
+            }}
+            onClick={(e) => e.stopPropagation()}
+            disabled={setIsolation.isPending}
+            className="mt-2 w-full text-[11px] bg-black/5 dark:bg-white/5 border border-current/20 rounded-lg py-1 px-1.5 focus:outline-none"
+            title="Isolation precaution"
+          >
+            {(Object.keys(ISOLATION_LABELS) as IsolationPrecaution[]).map((v) => (
+              <option key={v} value={v}>{ISOLATION_LABELS[v]}</option>
+            ))}
+          </select>
+        </Can>
+      )}
       <Can permission={P.INPATIENT_MANAGE}>
         <button
           type="button"
@@ -95,7 +142,20 @@ function BedTile({ row }: { row: BedOccupancy }) {
 function NewWardModal({ onClose }: { onClose: () => void }) {
   const createWard = useCreateWard();
   const [name, setName] = useState('');
+  const [wardType, setWardType] = useState<WardType | ''>('');
   const [capacity, setCapacity] = useState('');
+  const [billableItemCode, setBillableItemCode] = useState('');
+  const [codeTouched, setCodeTouched] = useState(false);
+
+  // Suggests (never forces) a default billable_item_code from the selected ward type — the
+  // tenant can always override it, and once they've typed their own value this stops overwriting
+  // it. billable_item_code still prices the ward on its own; ward_type is classification only.
+  const handleWardTypeChange = (value: WardType | '') => {
+    setWardType(value);
+    if (!codeTouched) {
+      setBillableItemCode(WARD_TYPE_OPTIONS.find((o) => o.value === value)?.suggestedCode ?? '');
+    }
+  };
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -103,7 +163,12 @@ function NewWardModal({ onClose }: { onClose: () => void }) {
       return;
     }
     try {
-      await createWard.mutateAsync({ name: name.trim(), capacity: capacity ? Number(capacity) : undefined });
+      await createWard.mutateAsync({
+        name: name.trim(),
+        ward_type: wardType || undefined,
+        capacity: capacity ? Number(capacity) : undefined,
+        billable_item_code: billableItemCode.trim() || undefined,
+      });
       toast.success('Ward created');
       onClose();
     } catch (e) {
@@ -126,6 +191,30 @@ function NewWardModal({ onClose }: { onClose: () => void }) {
               Ward Name <span className="text-destructive">*</span>
             </label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. General Ward" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Ward Type</label>
+            <select
+              value={wardType}
+              onChange={(e) => handleWardTypeChange(e.target.value as WardType | '')}
+              className="w-full bg-background border border-border rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            >
+              {WARD_TYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground mt-1">Classification only — for grouping/filtering. Doesn't replace the billing code below.</p>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Billing Code (department=inpatient)</label>
+            <Input
+              value={billableItemCode}
+              onChange={(e) => {
+                setCodeTouched(true);
+                setBillableItemCode(e.target.value);
+              }}
+              placeholder="e.g. BED_DAY_GENERAL"
+            />
           </div>
           <div>
             <label className="text-xs font-semibold text-muted-foreground mb-1 block">Capacity (informational)</label>

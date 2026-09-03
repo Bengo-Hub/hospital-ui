@@ -10,6 +10,9 @@ import {
   type CreateBedInput,
   type CreateWardInput,
   type DischargeInput,
+  type IsolationPrecaution,
+  type RecordVitalsChartInput,
+  type RecordWardRoundInput,
   type TransferInput,
 } from '@/lib/api/inpatient';
 
@@ -74,6 +77,16 @@ export function useSetBedStatus() {
   });
 }
 
+export function useSetBedIsolationPrecaution() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bedId, isolationPrecaution }: { bedId: string; isolationPrecaution: IsolationPrecaution }) =>
+      inpatientApi.setBedIsolationPrecaution(orgSlug, bedId, isolationPrecaution),
+    onSuccess: () => invalidateInpatient(qc, orgSlug),
+  });
+}
+
 // ── Admissions ───────────────────────────────────────────────────────────────────────────────
 
 export function useAdmissions(status?: AdmissionStatus) {
@@ -127,5 +140,54 @@ export function useDischarge() {
     // posts the real ward/day-rate charge before the 409, so the UI must refresh regardless of
     // whether this call ultimately succeeded.
     onSettled: () => invalidateInpatient(qc, orgSlug),
+  });
+}
+
+export function useTransferHistory(admissionId?: string) {
+  const orgSlug = useOrgSlug();
+  return useQuery({
+    queryKey: ['hospital', 'transfers', orgSlug, admissionId],
+    queryFn: () => inpatientApi.listTransfers(orgSlug, admissionId as string),
+    enabled: !!orgSlug && !!admissionId,
+  });
+}
+
+// ── Nursing vitals chart / doctor's ward rounds ─────────────────────────────────────────────
+
+export function useVitalsChart(admissionId?: string) {
+  const orgSlug = useOrgSlug();
+  return useQuery({
+    queryKey: ['hospital', 'vitals-chart', orgSlug, admissionId],
+    queryFn: () => inpatientApi.listVitalsChart(orgSlug, admissionId as string),
+    enabled: !!orgSlug && !!admissionId,
+  });
+}
+
+export function useRecordVitalsChart() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ admissionId, data }: { admissionId: string; data: RecordVitalsChartInput }) =>
+      inpatientApi.recordVitalsChart(orgSlug, admissionId, data),
+    onSuccess: (_r, { admissionId }) => qc.invalidateQueries({ queryKey: ['hospital', 'vitals-chart', orgSlug, admissionId] }),
+  });
+}
+
+export function useWardRounds(admissionId?: string) {
+  const orgSlug = useOrgSlug();
+  return useQuery({
+    queryKey: ['hospital', 'ward-rounds', orgSlug, admissionId],
+    queryFn: () => inpatientApi.listWardRounds(orgSlug, admissionId as string),
+    enabled: !!orgSlug && !!admissionId,
+  });
+}
+
+export function useRecordWardRound() {
+  const orgSlug = useOrgSlug();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ admissionId, data }: { admissionId: string; data: RecordWardRoundInput }) =>
+      inpatientApi.recordWardRound(orgSlug, admissionId, data),
+    onSuccess: (_r, { admissionId }) => qc.invalidateQueries({ queryKey: ['hospital', 'ward-rounds', orgSlug, admissionId] }),
   });
 }

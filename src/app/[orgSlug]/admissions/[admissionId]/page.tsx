@@ -12,10 +12,14 @@ import { useAppPermissions } from '@/hooks/use-app-permissions';
 import { P } from '@/lib/rbac/permissions';
 import { apiErrorMessage } from '@/lib/api/error-message';
 import { useAdmission, useWards, useTransfer, useDischarge } from '@/hooks/useInpatient';
+import type { ConditionAtDischarge } from '@/lib/api/inpatient';
 import { useAccountByAdmission } from '@/hooks/useBilling';
 import { usePatient, useVisit } from '@/hooks/useClinical';
 import { AdmissionChargesPanel } from '@/components/billing/admission-charges-panel';
 import { MarPanel } from '@/components/clinical/mar-panel';
+import { VitalsChartPanel } from '@/components/clinical/vitals-chart-panel';
+import { WardRoundsPanel } from '@/components/clinical/ward-rounds-panel';
+import { TransferHistoryPanel } from '@/components/inpatient/transfer-history-panel';
 import { inpatientApi } from '@/lib/api/inpatient';
 import type { TransferType } from '@/lib/api/inpatient';
 
@@ -179,11 +183,27 @@ function DischargeModal({
   const discharge = useDischarge();
   const [summary, setSummary] = useState('');
   const [overrideReason, setOverrideReason] = useState('');
+  const [dischargeDiagnosis, setDischargeDiagnosis] = useState('');
+  const [proceduresPerformed, setProceduresPerformed] = useState('');
+  const [dischargeMedications, setDischargeMedications] = useState('');
+  const [followUpInstructions, setFollowUpInstructions] = useState('');
+  const [conditionAtDischarge, setConditionAtDischarge] = useState<ConditionAtDischarge | ''>('');
   const canOverride = can(P.BILLING_OVERRIDE_SETTLEMENT);
 
   const handleSubmit = async () => {
     try {
-      await discharge.mutateAsync({ admissionId, data: { summary: summary.trim() || undefined, override_reason: overrideReason.trim() || undefined } });
+      await discharge.mutateAsync({
+        admissionId,
+        data: {
+          summary: summary.trim() || undefined,
+          override_reason: overrideReason.trim() || undefined,
+          discharge_diagnosis: dischargeDiagnosis.trim() || undefined,
+          procedures_performed: proceduresPerformed.trim() || undefined,
+          discharge_medications: dischargeMedications.trim() || undefined,
+          follow_up_instructions: followUpInstructions.trim() || undefined,
+          condition_at_discharge: conditionAtDischarge || undefined,
+        },
+      });
       toast.success('Patient discharged');
       onClose();
     } catch (e) {
@@ -209,13 +229,64 @@ function DischargeModal({
               </p>
             </div>
           )}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1 block">Discharge Diagnosis</label>
+              <input
+                value={dischargeDiagnosis}
+                onChange={(e) => setDischargeDiagnosis(e.target.value)}
+                className="w-full bg-background border border-border rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1 block">Condition at Discharge</label>
+              <select
+                value={conditionAtDischarge}
+                onChange={(e) => setConditionAtDischarge(e.target.value as ConditionAtDischarge | '')}
+                className="w-full bg-background border border-border rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              >
+                <option value="">—</option>
+                <option value="recovered">Recovered</option>
+                <option value="improved">Improved</option>
+                <option value="unchanged">Unchanged</option>
+                <option value="deteriorated">Deteriorated</option>
+                <option value="deceased">Deceased</option>
+              </select>
+            </div>
+          </div>
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Discharge Summary</label>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Procedures Performed</label>
+            <input
+              value={proceduresPerformed}
+              onChange={(e) => setProceduresPerformed(e.target.value)}
+              className="w-full bg-background border border-border rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Discharge Medications</label>
+            <textarea
+              value={dischargeMedications}
+              onChange={(e) => setDischargeMedications(e.target.value)}
+              rows={2}
+              className="w-full bg-background border border-border rounded-xl py-2 px-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Follow-up Instructions</label>
+            <textarea
+              value={followUpInstructions}
+              onChange={(e) => setFollowUpInstructions(e.target.value)}
+              rows={2}
+              className="w-full bg-background border border-border rounded-xl py-2 px-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Additional Notes</label>
             <textarea
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
-              rows={3}
-              placeholder="Condition at discharge, follow-up instructions…"
+              rows={2}
+              placeholder="Anything not covered above…"
               className="w-full bg-background border border-border rounded-xl py-2 px-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
@@ -326,10 +397,27 @@ export default function AdmissionDetailPage() {
             <p className="font-medium mt-1">{admission.discharged_at ? new Date(admission.discharged_at).toLocaleString() : '—'}</p>
           </div>
         </div>
-        {admission.discharge_summary && (
-          <div className="px-5 pb-5">
-            <p className="text-xs text-muted-foreground mb-1">Discharge Summary</p>
-            <p className="text-sm">{admission.discharge_summary}</p>
+        {(admission.discharge_diagnosis || admission.condition_at_discharge || admission.procedures_performed ||
+          admission.discharge_medications || admission.follow_up_instructions || admission.discharge_summary) && (
+          <div className="px-5 pb-5 space-y-2 text-sm">
+            {admission.discharge_diagnosis && (
+              <p><span className="text-xs text-muted-foreground">Discharge Diagnosis: </span>{admission.discharge_diagnosis}</p>
+            )}
+            {admission.condition_at_discharge && (
+              <p><span className="text-xs text-muted-foreground">Condition at Discharge: </span>{admission.condition_at_discharge}</p>
+            )}
+            {admission.procedures_performed && (
+              <p><span className="text-xs text-muted-foreground">Procedures Performed: </span>{admission.procedures_performed}</p>
+            )}
+            {admission.discharge_medications && (
+              <p><span className="text-xs text-muted-foreground">Discharge Medications: </span>{admission.discharge_medications}</p>
+            )}
+            {admission.follow_up_instructions && (
+              <p><span className="text-xs text-muted-foreground">Follow-up Instructions: </span>{admission.follow_up_instructions}</p>
+            )}
+            {admission.discharge_summary && (
+              <p><span className="text-xs text-muted-foreground">Additional Notes: </span>{admission.discharge_summary}</p>
+            )}
           </div>
         )}
       </Card>
@@ -337,6 +425,12 @@ export default function AdmissionDetailPage() {
       <AdmissionChargesPanel admissionId={admission.id} />
 
       <MarPanel admissionId={admission.id} />
+
+      <VitalsChartPanel admissionId={admission.id} />
+
+      <WardRoundsPanel admissionId={admission.id} />
+
+      <TransferHistoryPanel admissionId={admission.id} />
 
       {transferOpen && <TransferModal admissionId={admission.id} currentBedId={admission.bed_id} onClose={() => setTransferOpen(false)} />}
       {dischargeOpen && <DischargeModal admissionId={admission.id} outstandingBalance={outstandingBalance} onClose={() => setDischargeOpen(false)} />}
