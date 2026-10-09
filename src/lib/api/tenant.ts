@@ -4,6 +4,8 @@
  * Auth-api: GET /api/v1/tenants/by-slug/{slug} (public).
  */
 
+import { serviceBrandingMap, type ServiceBrandingEntry } from '@bengo-hub/shared-ui-lib/branding';
+
 const AUTH_API_URL =
   process.env.NEXT_PUBLIC_AUTH_URL ||
   process.env.NEXT_PUBLIC_AUTH_API_URL ||
@@ -48,6 +50,8 @@ export interface TenantBrand {
   secondaryColor: string | null;
   orgName: string;
   useCase: string;
+  /** The tenant's own app names (metadata service_branding, set in Accounts > Branding). */
+  serviceBranding?: Record<string, ServiceBrandingEntry>;
 }
 
 export function parseBrandFromTenant(t: TenantResponse): TenantBrand {
@@ -66,6 +70,7 @@ export function parseBrandFromTenant(t: TenantResponse): TenantBrand {
     secondaryColor: typeof secondaryColor === 'string' ? secondaryColor : null,
     orgName: typeof orgName === 'string' ? orgName : (t.name ?? ''),
     useCase: t.use_case ?? 'other',
+    serviceBranding: serviceBrandingMap(t.metadata),
   };
 }
 
