@@ -6,7 +6,7 @@ import { ChevronDown, Menu, User } from 'lucide-react';
 import { ThemeToggle } from './theme-toggle';
 import { useBranding } from '@/providers/branding-provider';
 import { useParams } from 'next/navigation';
-import { useVisibleServices, AppSwitcherGrid, AppSwitcherTrigger, type ServiceKey } from '@bengo-hub/shared-ui-lib/app-switcher';
+import { useVisibleServices, serviceTagsFromAccessToken, AppSwitcherGrid, AppSwitcherTrigger, type ServiceKey } from '@bengo-hub/shared-ui-lib/app-switcher';
 import { AccountPanel } from '@bengo-hub/shared-ui-lib/account-panel';
 import { OutletSwitcher } from './outlet-switcher';
 
@@ -52,7 +52,15 @@ export function Header({ onMenuClick }: HeaderProps) {
   // The App Store shows every real service to every authenticated user in the tenant — each
   // destination service already enforces its own RBAC + subscription gating on arrival, so
   // pre-filtering the directory here just hid apps that were actually reachable.
-  const services = useVisibleServices({ orgSlug, urls: SERVICE_URLS, canManageLinks: true });
+  // A service outside the plan stays visible as "Not in your plan" with a link to the plans page
+  // (shared-ui-lib default), so tenants discover the rest of the suite without hitting a 403.
+  const services = useVisibleServices({
+    orgSlug,
+    urls: SERVICE_URLS,
+    canManageLinks: true,
+    activeServiceTags: serviceTagsFromAccessToken(session?.accessToken),
+    upgradeUrl: SERVICE_URLS.subscriptions ? `${SERVICE_URLS.subscriptions}/${orgSlug}` : null,
+  });
 
   return (
     <header className="h-16 sm:h-20 border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-30 px-3 sm:px-8 flex items-center justify-between">
