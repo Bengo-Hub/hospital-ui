@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/auth';
 import { facilityModulesFor, useFacilityType } from '@/lib/facility-nomenclature';
 import { NAV_ENTRIES, isNavGroup, type NavItem, type NavGroup } from '@/lib/nav-config';
 import { useAppPermissions } from '@/hooks/use-app-permissions';
+import { MediaImage } from '@bengo-hub/shared-ui-lib/media';
 
 interface SidebarProps {
   open?: boolean;
@@ -136,7 +137,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
       <div className="border-b border-sidebar-border shrink-0 overflow-hidden" style={{ height: '72px' }}>
         {tenant?.logoUrl ? (
           <div className="flex items-center h-full px-3 py-2">
-            <img src={tenant.logoUrl} alt={tenant.name ?? orgSlug} className="h-full w-auto max-w-full object-contain" />
+            <MediaImage src={tenant.logoUrl} displayWidth={220} loading="eager" alt={tenant.name ?? orgSlug} className="h-full w-auto max-w-full object-contain" />
           </div>
         ) : (
           <div className="flex items-center gap-3 h-full px-4">
