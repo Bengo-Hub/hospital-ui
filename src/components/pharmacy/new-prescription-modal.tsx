@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { Loader2, Pill, Plus, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
+import type { SearchContext } from '@bengo-hub/shared-ui-lib/search';
 import { Button, Input } from '@/components/ui/base';
 import { Skeleton } from '@/components/ui/page';
 import { CreatableSelect } from '@/components/ui/creatable-select';
@@ -91,8 +92,8 @@ export function NewPrescriptionModal({
       toast.error(await apiErrorMessage(e, 'Failed to open visit'));
     }
   };
-  const searchDrugs = async (q: string): Promise<ComboboxOption[]> => {
-    const items = await pharmacyApi.searchDrugs(orgSlug, q);
+  const searchDrugs = async (q: string, { signal }: SearchContext): Promise<ComboboxOption[]> => {
+    const items = await pharmacyApi.searchDrugs(orgSlug, q, signal);
     items.forEach((item) => drugCacheRef.current.set(item.sku, item));
     return items.map(drugToOption);
   };

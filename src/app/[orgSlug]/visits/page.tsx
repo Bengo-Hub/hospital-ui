@@ -18,8 +18,9 @@
 // page with explicit completed/cancelled fetches, otherwise "All" would silently keep hiding two
 // of exactly the statuses this page exists to surface.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useDebouncedSearch } from '@bengo-hub/shared-ui-lib/search';
 import Link from 'next/link';
 import { ClipboardList, Search, Wallet } from 'lucide-react';
 import { PageHeader, EmptyState, Skeleton } from '@/components/ui/page';
@@ -82,13 +83,9 @@ function VisitsPage() {
   const params = useParams();
   const orgSlug = (params?.orgSlug as string) ?? '';
   const [statusFilter, setStatusFilter] = useState<VisitStatus | 'all'>('all');
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
-    return () => clearTimeout(t);
-  }, [search]);
+  // The box updates on every key; only the settled term reaches the patient search.
+  const search = useDebouncedSearch();
+  const debouncedSearch = search.term;
 
   const { data: openVisits, isLoading: l1 } = useVisits(statusFilter === 'all' ? undefined : statusFilter);
   const { data: completedVisits, isLoading: l2 } = useVisits('completed');
@@ -133,8 +130,7 @@ function VisitsPage() {
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            {...search.inputProps}
             placeholder="Search by patient name or visit number…"
             className="pl-10"
           />

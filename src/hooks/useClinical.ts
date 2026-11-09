@@ -19,8 +19,10 @@ export function usePatients(q?: string) {
   const orgSlug = useOrgSlug();
   return useQuery({
     queryKey: ['hospital', 'patients', orgSlug, q],
-    queryFn: () => patientsApi.list(orgSlug, q),
+    queryFn: ({ signal }) => patientsApi.list(orgSlug, q, signal),
     enabled: !!orgSlug,
+    // Keep the current rows on screen while the next search term loads.
+    placeholderData: (prev) => prev,
   });
 }
 

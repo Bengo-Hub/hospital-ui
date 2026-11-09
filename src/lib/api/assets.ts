@@ -34,8 +34,10 @@ export interface AssetMaintenanceRecord {
 }
 
 export const assetsApi = {
-  list: (orgSlug: string, search?: string) =>
-    apiClient.get<{ data: Asset[] }>(`${hospitalBase(orgSlug)}/assets`, search ? { search } : undefined).then(unwrapList),
+  list: (orgSlug: string, search?: string, signal?: AbortSignal) =>
+    apiClient
+      .get<{ data: Asset[] }>(`${hospitalBase(orgSlug)}/assets`, search ? { search } : undefined, { signal })
+      .then(unwrapList),
   get: (orgSlug: string, assetId: string) => apiClient.get<Asset>(`${hospitalBase(orgSlug)}/assets/${assetId}`),
   listMaintenance: (orgSlug: string, assetId: string) =>
     apiClient.get<{ data: AssetMaintenanceRecord[] }>(`${hospitalBase(orgSlug)}/assets/${assetId}/maintenance`).then(unwrapList),

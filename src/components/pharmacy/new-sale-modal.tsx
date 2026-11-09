@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Loader2, Minus, Plus, Receipt, ShoppingCart, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
+import type { SearchContext } from '@bengo-hub/shared-ui-lib/search';
 import { Button, Input } from '@/components/ui/base';
 import { apiErrorMessage } from '@/lib/api/error-message';
 import { useCreatePrescription, useApprovePrescription, useDispensePrescription, useCollectWalkInSale } from '@/hooks/usePharmacy';
@@ -56,8 +57,8 @@ export function NewSaleModal({ orgSlug, onClose }: { orgSlug: string; onClose: (
   const total = cart.reduce((sum, l) => sum + l.quantity * l.unit_price, 0);
   const needsWitness = cart.some((l) => l.is_controlled_substance);
 
-  const searchDrugs = async (q: string): Promise<ComboboxOption[]> => {
-    const items = await pharmacyApi.searchDrugs(orgSlug, q);
+  const searchDrugs = async (q: string, { signal }: SearchContext): Promise<ComboboxOption[]> => {
+    const items = await pharmacyApi.searchDrugs(orgSlug, q, signal);
     items.forEach((item) => drugCacheRef.current.set(item.sku, item));
     return items.map(drugToOption);
   };

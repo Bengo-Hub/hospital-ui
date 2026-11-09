@@ -76,8 +76,8 @@ export interface PatientDuplicateSummary {
 export const patientsApi = {
   register: (orgSlug: string, data: RegisterPatientInput) =>
     apiClient.post<Patient>(`${hospitalBase(orgSlug)}/patients`, data),
-  list: async (orgSlug: string, q?: string): Promise<Patient[]> => {
-    const res = await apiClient.get<{ data: Patient[] }>(`${hospitalBase(orgSlug)}/patients`, q ? { q } : undefined);
+  list: async (orgSlug: string, q?: string, signal?: AbortSignal): Promise<Patient[]> => {
+    const res = await apiClient.get<{ data: Patient[] }>(`${hospitalBase(orgSlug)}/patients`, q ? { q } : undefined, { signal });
     return unwrapList(res);
   },
   get: (orgSlug: string, patientId: string) =>

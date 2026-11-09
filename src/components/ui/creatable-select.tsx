@@ -2,6 +2,7 @@
 
 import { Plus } from 'lucide-react';
 import { SearchableCombobox } from '@bengo-hub/shared-ui-lib/combobox';
+import type { SearchContext } from '@bengo-hub/shared-ui-lib/search';
 
 export interface SelectOption {
   id: string;
@@ -25,7 +26,7 @@ interface Props {
    * by the caller. Fires automatically when the prefetched `options` yield fewer than
    * `remoteThreshold` local matches. Omit for small, fully-prefetched lists.
    */
-  onRemoteSearch?: (query: string) => Promise<SelectOption[]>;
+  onRemoteSearch?: (query: string, context: SearchContext) => Promise<SelectOption[]>;
   remoteThreshold?: number;
   /** Fallback display name when `value` is pre-set (edit/amend) but its record isn't in
    * `options` (e.g. it lives past the prefetched page) — avoids showing `placeholder` for an
@@ -51,7 +52,7 @@ export function CreatableSelect({ value, onChange, options, placeholder = 'Selec
         disabled={disabled}
         clearable={!required}
         valueLabel={valueLabel}
-        onRemoteSearch={onRemoteSearch ? async (q) => (await onRemoteSearch(q)).map((o) => ({ value: o.id, label: o.name, hint: o.hint })) : undefined}
+        onRemoteSearch={onRemoteSearch ? async (q, context) => (await onRemoteSearch(q, context)).map((o) => ({ value: o.id, label: o.name, hint: o.hint })) : undefined}
         remoteThreshold={remoteThreshold}
         footer={
           onAddClick ? (

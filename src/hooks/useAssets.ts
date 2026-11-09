@@ -13,9 +13,11 @@ export function useAssets(search?: string) {
   const orgSlug = useOrgSlug();
   return useQuery({
     queryKey: ['hospital', 'assets', orgSlug, search],
-    queryFn: () => assetsApi.list(orgSlug, search),
+    queryFn: ({ signal }) => assetsApi.list(orgSlug, search, signal),
     enabled: !!orgSlug,
     staleTime: 60_000,
+    // Keep the current rows on screen while the next search term loads.
+    placeholderData: (prev) => prev,
   });
 }
 

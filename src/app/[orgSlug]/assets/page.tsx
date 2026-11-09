@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useDebouncedSearch } from '@bengo-hub/shared-ui-lib/search';
 import { AlertTriangle, CheckCircle2, Stethoscope, Wrench } from 'lucide-react';
 import { Card, Badge, Input } from '@/components/ui/base';
 import { PageHeader, EmptyState, Skeleton } from '@/components/ui/page';
@@ -18,8 +18,9 @@ const STATUS_BADGE: Record<Asset['status'], { variant: 'default' | 'success' | '
 };
 
 export default function BiomedicalEquipmentPage() {
-  const [search, setSearch] = useState('');
-  const { data: assets, isLoading } = useAssets(search || undefined);
+  // The box updates on every key; only the settled term reaches the query.
+  const search = useDebouncedSearch();
+  const { data: assets, isLoading } = useAssets(search.term || undefined);
   const rows = assets ?? [];
 
   return (
@@ -31,7 +32,7 @@ export default function BiomedicalEquipmentPage() {
       />
 
       <div className="flex flex-wrap gap-3 mb-5">
-        <Input placeholder="Search by name, tag, or serial number…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+        <Input placeholder="Search by name, tag, or serial number…" {...search.inputProps} className="max-w-sm" />
       </div>
 
       <Card>

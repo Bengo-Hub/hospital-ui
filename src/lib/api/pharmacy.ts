@@ -253,8 +253,8 @@ export const pharmacyApi = {
   downloadLabel: (orgSlug: string, prescriptionId: string, lineId: string) =>
     apiClient.getBlob(`${hospitalBase(orgSlug)}/prescriptions/${prescriptionId}/lines/${lineId}/label.pdf`),
 
-  searchDrugs: async (orgSlug: string, q: string): Promise<DrugSearchItem[]> => {
-    const res = await apiClient.get<{ data: DrugSearchItem[] }>(`${hospitalBase(orgSlug)}/pharmacy/drug-search`, q ? { q } : undefined);
+  searchDrugs: async (orgSlug: string, q: string, signal?: AbortSignal): Promise<DrugSearchItem[]> => {
+    const res = await apiClient.get<{ data: DrugSearchItem[] }>(`${hospitalBase(orgSlug)}/pharmacy/drug-search`, q ? { q } : undefined, { signal });
     return unwrapList(res);
   },
 

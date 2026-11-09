@@ -8,8 +8,9 @@
 // capture, and non-blocking duplicate-patient warning (2026-09-03 MVP gap backlog) are all now
 // wired here.
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useDebouncedSearch } from '@bengo-hub/shared-ui-lib/search';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { ClipboardPlus, Search, UserPlus, UserSquare } from 'lucide-react';
@@ -59,16 +60,12 @@ function PatientRow({ patient, orgSlug, onOpenVisit, pending }: { patient: Patie
 function PatientsPage() {
   const params = useParams();
   const orgSlug = (params?.orgSlug as string) ?? '';
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [registerOpen, setRegisterOpen] = useState(false);
   const [openingId, setOpeningId] = useState<string | null>(null);
 
-  // Debounce the search box so every keystroke doesn't fire a request.
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
-    return () => clearTimeout(t);
-  }, [search]);
+  // The box updates on every key; only the settled term reaches the query.
+  const search = useDebouncedSearch();
+  const debouncedSearch = search.term;
 
   const { data: patients, isLoading } = usePatients(debouncedSearch || undefined);
   const { data: registeredVisits } = useVisits('registered');
@@ -118,8 +115,7 @@ function PatientsPage() {
       <div className="relative mb-5 max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          {...search.inputProps}
           placeholder="Search by name, phone, MRN, ID…"
           className="pl-10"
         />
