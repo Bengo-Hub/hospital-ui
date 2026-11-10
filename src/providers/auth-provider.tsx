@@ -5,6 +5,8 @@ import { parseLimitInfo } from '@/lib/api/error-handler';
 import { LimitReachedModal } from '@/components/subscription/limit-reached-modal';
 import { useLimitModal } from '@/store/limit-modal';
 import { useAuthStore } from '@/store/auth';
+import { AUTH_STORAGE_KEY } from '@/lib/auth/token-refresh';
+import { watchSessionAcrossTabs } from '@bengo-hub/shared-ui-lib/auth';
 import { useQueryClient } from '@tanstack/react-query';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useState } from 'react';
@@ -31,6 +33,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         initialize().finally(() => { if (active) setReady(true); });
         return () => { active = false; };
     }, [initialize]);
+
+    // Another tab renewed or replaced the session: load it here and point the API client at the
+    // new token, so this tab neither sends a rotated-away token nor writes its stale copy back.
+    useEffect(
+        () =>
+            watchSessionAcrossTabs(AUTH_STORAGE_KEY, () => {
+                void Promise.resolve(useAuthStore.persist.rehydrate()).then(() => {
+                    const token = useAuthStore.getState().session?.accessToken;
+                    if (token) apiClient.setAccessToken(token);
+                });
+            }),
+        [],
+    );
 
     // Register 401 handler: clear all caches and redirect to SSO.
     useEffect(() => {
