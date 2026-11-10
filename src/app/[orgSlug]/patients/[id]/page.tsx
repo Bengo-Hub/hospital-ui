@@ -23,6 +23,7 @@ function EditPatientModal({ patient, onClose }: { patient: Patient; onClose: () 
   const [idNumber, setIdNumber] = useState(patient.id_number ?? '');
   const [address, setAddress] = useState(patient.address ?? '');
   const [nextOfKin, setNextOfKin] = useState(patient.next_of_kin ?? '');
+  const [crmConsent, setCrmConsent] = useState(Boolean(patient.crm_consent_at));
 
   const handleSave = async () => {
     if (!fullName.trim()) {
@@ -30,7 +31,7 @@ function EditPatientModal({ patient, onClose }: { patient: Patient; onClose: () 
       return;
     }
     try {
-      await update.mutateAsync({
+      const saved = await update.mutateAsync({
         patientId: patient.id,
         data: {
           full_name: fullName.trim(),
@@ -40,9 +41,11 @@ function EditPatientModal({ patient, onClose }: { patient: Patient; onClose: () 
           id_number: idNumber.trim() || undefined,
           address: address.trim() || undefined,
           next_of_kin: nextOfKin.trim() || undefined,
+          crm_consent: crmConsent,
         },
       });
       toast.success('Patient updated');
+      if (saved.crm_notice) toast.info(saved.crm_notice);
       onClose();
     } catch (e) {
       toast.error(await apiErrorMessage(e, 'Failed to update patient'));
@@ -95,6 +98,22 @@ function EditPatientModal({ patient, onClose }: { patient: Patient; onClose: () 
             <label className="text-xs font-semibold text-muted-foreground mb-1 block">Next of Kin (chart note)</label>
             <Input value={nextOfKin} onChange={(e) => setNextOfKin(e.target.value)} placeholder="Free-text — for the settlement contact, use Settle Account instead" />
           </div>
+          <label className="flex items-start gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={crmConsent}
+              onChange={(e) => setCrmConsent(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-border"
+            />
+            <span>
+              Add to our customer list for receipts and statements
+              <span className="block text-xs text-muted-foreground">
+                {patient.crm_consent_at
+                  ? `Agreed on ${new Date(patient.crm_consent_at).toLocaleDateString()}. Untick if the patient no longer wants this.`
+                  : 'Only their name and phone number are shared. Ask the patient first.'}
+              </span>
+            </span>
+          </label>
         </div>
         <div className="flex gap-3 px-6 pb-6">
           <Button variant="outline" className="flex-1" onClick={onClose} disabled={update.isPending}>Cancel</Button>

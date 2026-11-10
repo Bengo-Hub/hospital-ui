@@ -48,6 +48,8 @@ export function RegisterPatientModal({
   const [address, setAddress] = useState('');
   const [nextOfKin, setNextOfKin] = useState('');
   const [allergies, setAllergies] = useState('');
+  // Kenya Data Protection Act: never ticked by default, the patient must agree.
+  const [crmConsent, setCrmConsent] = useState(false);
   const [checkingDuplicates, setCheckingDuplicates] = useState(false);
   const [duplicateMatches, setDuplicateMatches] = useState<PatientDuplicateSummary[] | null>(null);
 
@@ -82,8 +84,10 @@ export function RegisterPatientModal({
         allergy_flags: allergies.trim()
           ? allergies.split(',').map((a) => a.trim()).filter(Boolean)
           : undefined,
+        crm_consent: crmConsent || undefined,
       });
       toast.success(`${patient.full_name} registered — MRN ${patient.mrn}`);
+      if (patient.crm_notice) toast.info(patient.crm_notice);
       onRegistered(patient);
     } catch (e) {
       toast.error(await apiErrorMessage(e, 'Failed to register patient'));
@@ -228,6 +232,20 @@ export function RegisterPatientModal({
               placeholder="Penicillin, Latex, Peanuts… (comma-separated)"
             />
           </div>
+          <label className="flex items-start gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={crmConsent}
+              onChange={(e) => setCrmConsent(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-border"
+            />
+            <span>
+              Add to our customer list for receipts and statements
+              <span className="block text-xs text-muted-foreground">
+                Only their name and phone number are shared. Ask the patient first.
+              </span>
+            </span>
+          </label>
         </div>
         <div className="flex gap-3 px-6 pb-6">
           <button onClick={onClose} className="flex-1 min-h-11 rounded-xl border border-border text-sm font-semibold hover:bg-accent transition-colors">

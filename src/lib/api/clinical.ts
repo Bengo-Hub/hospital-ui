@@ -28,6 +28,10 @@ export interface Patient {
   allergy_flags?: string[];
   client_registry_id?: string;
   crm_contact_id?: string;
+  /** When the patient agreed to join the customer list. Absent means no consent. */
+  crm_consent_at?: string;
+  /** Set on a register or update reply when consent was given but the link could not be made. */
+  crm_notice?: string;
   status: string;
   created_at: string;
   updated_at: string;
@@ -46,6 +50,8 @@ export interface RegisterPatientInput {
   next_of_kin?: string;
   allergy_flags?: string[];
   outlet_id?: string;
+  /** The patient agreed to join the customer list for receipts and statements. */
+  crm_consent?: boolean;
 }
 
 export interface UpdatePatientInput {
@@ -60,6 +66,8 @@ export interface UpdatePatientInput {
   address?: string;
   next_of_kin?: string;
   allergy_flags?: string[];
+  /** True gives consent, false withdraws it, absent leaves it as it is. */
+  crm_consent?: boolean;
 }
 
 /** Lightweight projection returned by patientsApi.checkDuplicates — enough to recognise "is this
