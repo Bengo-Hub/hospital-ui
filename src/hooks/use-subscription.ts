@@ -43,7 +43,7 @@ export function useSubscription() {
   // tenant superuser (including a hospital facility admin) is a tenant-level admin and must NOT
   // bypass subscription gating (platform SEC-3 policy: otherwise any tenant admin unlocks paid
   // features for free). `roles` still drives real RBAC elsewhere, just not this.
-  const isPlatformOwner = !!user?.isPlatformOwner || tenantSlug === 'codevertex';
+  const isPlatformOwner = !!user?.isPlatformOwner;
   const isServiceCharge = (user as unknown as { billing_mode?: string } | null)?.billing_mode === 'service_charge';
   const isDemo = tenantSlug === 'codevertex-demo';
   // Platform-granted per-tenant exemption (sub_exempt JWT claim) — decoded straight from the
